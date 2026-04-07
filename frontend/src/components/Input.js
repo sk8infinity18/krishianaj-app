@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Typography, Radius, Spacing } from '../theme';
 
-const Input = ({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, error, icon, multiline, numberOfLines, editable = true, style }) => {
+const Input = ({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, error, icon, multiline, numberOfLines, editable = true, style, returnKeyType, onSubmitEditing, blurOnSubmit, ...rest }) => {
   const [focused, setFocused] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
@@ -25,10 +25,14 @@ const Input = ({ label, value, onChangeText, placeholder, secureTextEntry, keybo
           numberOfLines={numberOfLines}
           editable={editable}
           autoCapitalize="none"
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          blurOnSubmit={blurOnSubmit ?? !multiline}
+          {...rest}
         />
         {secureTextEntry && (
           <TouchableOpacity onPress={() => setShowPass(!showPass)} style={styles.eye}>
-            <Text style={{ color: Colors.textMuted }}>{showPass ? '👁' : '👁‍🗨'}</Text>
+            <Text style={{ color: Colors.textMuted }}>{showPass ? 'Hide' : 'Show'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -49,7 +53,7 @@ const styles = StyleSheet.create({
   errorBorder: { borderColor: Colors.error },
   disabled: { opacity: 0.6, backgroundColor: Colors.borderLight },
   icon: { marginRight: Spacing.sm },
-  input: { flex: 1, paddingVertical: 14, ...Typography.bodyLarge, color: Colors.textPrimary },
+  input: { flex: 1, paddingVertical: 14, ...Typography.bodyLarge, color: Colors.textPrimary, outlineStyle: 'none' },
   eye: { padding: 4 },
   errorText: { ...Typography.caption, color: Colors.error, marginTop: 4, marginLeft: 4 },
 });

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { api } from '../../services/api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const ForgotPasswordScreen = ({ navigation, route }) => {
+  const { showError, showWarning, showSuccess } = useSnackbar();
   const userType = route.params?.role || 'farmer';
   const [step, setStep] = useState(1); // 1: enter phone, 2: enter OTP+newPW
   const [phone, setPhone] = useState('');
@@ -15,24 +17,25 @@ const ForgotPasswordScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
 
   const sendOTP = async () => {
-    if (!phone) return Alert.alert('Error', 'Enter your phone number');
+    if (!phone) return showWarning('Enter your phone number');
     setLoading(true);
     try {
       await api.sendOTP({ phone_number: phone, user_type: userType });
-      Alert.alert('OTP Sent', 'Check your phone for the OTP code (valid 10 mins)');
+      showSuccess('OTP sent successfully');
       setStep(2);
-    } catch (err) { Alert.alert('Error', err.message); }
+    } catch (err) { showError(err.message); }
     finally { setLoading(false); }
   };
 
   const resetPassword = async () => {
-    if (!otp || !newPw) return Alert.alert('Error', 'Enter OTP and new password');
-    if (newPw !== confirmPw) return Alert.alert('Error', 'Passwords do not match');
+    if (!otp || !newPw) return showWarning('Enter OTP and new password');
+    if (newPw !== confirmPw) return showWarning('Passwords do not match');
     setLoading(true);
     try {
       await api.resetPassword({ phone_number: phone, otp_code: otp, new_password: newPw, user_type: userType });
-      Alert.alert('Success', 'Password reset successfully! Please login.', [{ text: 'OK', onPress: () => navigation.navigate('Login') }]);
-    } catch (err) { Alert.alert('Error', err.message); }
+      showSuccess('Password reset successfully');
+      navigation.navigate('Login');
+    } catch (err) { showError(err.message); }
     finally { setLoading(false); }
   };
 

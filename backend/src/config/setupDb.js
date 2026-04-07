@@ -19,12 +19,10 @@ const setupDatabase = async () => {
         farm_location TEXT,
         farm_state VARCHAR(100),
         farm_district VARCHAR(100),
-        farm_pincode VARCHAR(10),
         bio TEXT,
         total_earnings DECIMAL(12,2) DEFAULT 0,
         rating DECIMAL(3,2) DEFAULT 0,
         total_reviews INTEGER DEFAULT 0,
-        is_verified BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -62,7 +60,6 @@ const setupDatabase = async () => {
         price_per_unit DECIMAL(10,2) NOT NULL,
         min_order_quantity DECIMAL(10,2) DEFAULT 1,
         harvest_date DATE,
-        available_from DATE DEFAULT CURRENT_DATE,
         available_until DATE,
         quality_grade VARCHAR(10) DEFAULT 'A',
         organic BOOLEAN DEFAULT FALSE,
@@ -71,8 +68,6 @@ const setupDatabase = async () => {
         state VARCHAR(100),
         district VARCHAR(100),
         pincode VARCHAR(10),
-        latitude DECIMAL(10,8),
-        longitude DECIMAL(11,8),
         total_sold DECIMAL(10,2) DEFAULT 0,
         is_available BOOLEAN DEFAULT TRUE,
         is_active BOOLEAN DEFAULT TRUE,
@@ -97,14 +92,8 @@ const setupDatabase = async () => {
         delivery_state VARCHAR(100),
         delivery_pincode VARCHAR(10),
         status VARCHAR(30) DEFAULT 'pending',
-        payment_status VARCHAR(20) DEFAULT 'pending',
         payment_method VARCHAR(30),
-        payment_transaction_id VARCHAR(255),
         notes TEXT,
-        expected_delivery DATE,
-        delivered_at TIMESTAMP,
-        cancelled_at TIMESTAMP,
-        cancellation_reason TEXT,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -119,7 +108,6 @@ const setupDatabase = async () => {
         listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
         rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
         review_text TEXT,
-        images TEXT[],
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT NOW()
       );
@@ -147,16 +135,6 @@ const setupDatabase = async () => {
         quantity DECIMAL(10,2) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(consumer_id, listing_id)
-      );
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS wishlist (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        consumer_id UUID NOT NULL REFERENCES consumers(id) ON DELETE CASCADE,
-        listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(consumer_id, listing_id)
       );
     `);

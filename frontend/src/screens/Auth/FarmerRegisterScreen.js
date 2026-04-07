@@ -1,31 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const FarmerRegisterScreen = ({ navigation }) => {
   const { login } = useAuth();
+  const { showError, showWarning, showSuccess } = useSnackbar();
   const [form, setForm] = useState({ first_name: '', last_name: '', phone_number: '', farmer_id: '', password: '', confirm_password: '', farm_name: '', farm_state: '', farm_district: '' });
   const [loading, setLoading] = useState(false);
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleRegister = async () => {
     if (!form.first_name || !form.last_name || !form.phone_number || !form.farmer_id || !form.password)
-      return Alert.alert('Missing Info', 'Please fill all required fields');
+      return showWarning('Please fill all required fields');
     if (form.password !== form.confirm_password)
-      return Alert.alert('Password Mismatch', 'Passwords do not match');
+      return showWarning('Passwords do not match');
     if (form.password.length < 6)
-      return Alert.alert('Weak Password', 'Password must be at least 6 characters');
+      return showWarning('Password must be at least 6 characters');
 
     setLoading(true);
     try {
       const data = await api.farmerRegister(form);
       await login(data.user, data.token);
+      showSuccess('Account created successfully');
     } catch (err) {
-      Alert.alert('Registration Failed', err.message);
+      showError(err.message);
     } finally { setLoading(false); }
   };
 

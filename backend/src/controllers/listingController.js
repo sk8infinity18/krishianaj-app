@@ -1,6 +1,5 @@
 const { query } = require('../config/db');
 const { uploadToCloudinary } = require('../utils/cloudinary');
-const path = require('path');
 
 // Create listing
 const createListing = async (req, res) => {
@@ -15,7 +14,7 @@ const createListing = async (req, res) => {
     let images = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const url = await uploadToCloudinary(file.path, 'krishianaj/crops');
+        const url = await uploadToCloudinary(file.path, 'krishianaj/crops', req);
         images.push(url);
       }
     }
@@ -33,6 +32,10 @@ const createListing = async (req, res) => {
     res.status(201).json({ success: true, message: 'Crop listed successfully', listing: result.rows[0] });
   } catch (err) {
     console.error('createListing error:', err);
+    if (err.message === 'Only image files are allowed') {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
     res.status(500).json({ success: false, message: 'Failed to create listing' });
   }
 };

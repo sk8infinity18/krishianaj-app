@@ -28,6 +28,7 @@ import CartScreen from '../screens/Consumer/CartScreen';
 import PlaceOrderScreen from '../screens/Consumer/PlaceOrderScreen';
 import MyOrdersScreen from '../screens/Consumer/MyOrdersScreen';
 import AddReviewScreen from '../screens/Consumer/AddReviewScreen';
+import ConsumerProfileScreen from '../screens/Consumer/ConsumerProfileScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,22 +40,33 @@ const TabIcon = ({ icon, label, focused }) => (
   </View>
 );
 
+const ICONS = {
+  home: '\u{1F3E0}',
+  listings: '\u{1F33F}',
+  add: '\u2795',
+  orders: '\u{1F4E6}',
+  earnings: '\u{1F4B0}',
+  search: '\u{1F50D}',
+  cart: '\u{1F6D2}',
+  splash: '\u{1F33E}',
+};
+
 const FarmerTabs = () => (
   <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: { backgroundColor: '#fff', borderTopColor: Colors.border, height: 60, paddingBottom: 8 }, tabBarShowLabel: false }}>
-    <Tab.Screen name="Dashboard" component={FarmerDashboardScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏠" label="Home" focused={focused} /> }} />
-    <Tab.Screen name="MyListings" component={MyListingsScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🌿" label="Listings" focused={focused} /> }} />
-    <Tab.Screen name="AddListing" component={AddListingScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="➕" label="Add" focused={focused} /> }} />
-    <Tab.Screen name="FarmerOrders" component={FarmerOrdersScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="📦" label="Orders" focused={focused} /> }} />
-    <Tab.Screen name="Earnings" component={EarningsScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="💰" label="Earnings" focused={focused} /> }} />
+    <Tab.Screen name="Dashboard" component={FarmerDashboardScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.home} label="Home" focused={focused} /> }} />
+    <Tab.Screen name="MyListings" component={MyListingsScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.listings} label="Listings" focused={focused} /> }} />
+    <Tab.Screen name="AddListing" component={AddListingScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.add} label="Add" focused={focused} /> }} />
+    <Tab.Screen name="FarmerOrders" component={FarmerOrdersScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.orders} label="Orders" focused={focused} /> }} />
+    <Tab.Screen name="Earnings" component={EarningsScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.earnings} label="Earnings" focused={focused} /> }} />
   </Tab.Navigator>
 );
 
 const ConsumerTabs = () => (
   <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: { backgroundColor: '#fff', borderTopColor: Colors.border, height: 60, paddingBottom: 8 }, tabBarShowLabel: false }}>
-    <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏠" label="Home" focused={focused} /> }} />
-    <Tab.Screen name="Search" component={HomeScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🔍" label="Search" focused={focused} /> }} />
-    <Tab.Screen name="Cart" component={CartScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🛒" label="Cart" focused={focused} /> }} />
-    <Tab.Screen name="MyOrders" component={MyOrdersScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon="📦" label="Orders" focused={focused} /> }} />
+    <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.home} label="Home" focused={focused} /> }} />
+    <Tab.Screen name="Search" component={HomeScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.search} label="Search" focused={focused} /> }} />
+    <Tab.Screen name="Cart" component={CartScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.cart} label="Cart" focused={focused} /> }} />
+    <Tab.Screen name="MyOrders" component={MyOrdersScreen} options={{ tabBarIcon: ({ focused }) => <TabIcon icon={ICONS.orders} label="Orders" focused={focused} /> }} />
   </Tab.Navigator>
 );
 
@@ -63,7 +75,7 @@ const AppNavigator = () => {
 
   if (loading) return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary }}>
-      <Text style={{ fontSize: 52 }}>🌾</Text>
+      <Text style={{ fontSize: 52 }}>{ICONS.splash}</Text>
       <Text style={{ ...Typography.h2, color: '#fff', marginTop: 12 }}>KrishiAnaj</Text>
     </View>
   );
@@ -93,6 +105,7 @@ const AppNavigator = () => {
             <Stack.Screen name="PlaceOrder" component={PlaceOrderScreen} />
             <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
             <Stack.Screen name="AddReview" component={AddReviewScreen} />
+            <Stack.Screen name="ConsumerProfile" component={ConsumerProfileScreen} />
             <Stack.Screen name="FarmerProfile" component={FarmerProfileScreen} />
           </>
         )}

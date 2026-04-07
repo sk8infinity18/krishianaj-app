@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
+  const { showError, showWarning, showSuccess } = useSnackbar();
   const [role, setRole] = useState('farmer'); // 'farmer' | 'consumer'
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -15,18 +17,19 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!form.identifier || !form.password)
-      return Alert.alert('Missing Info', 'Please enter your credentials');
+      return showWarning('Please enter your credentials');
     setLoading(true);
     try {
       let data;
       if (role === 'farmer') {
         data = await api.farmerLogin({ first_name: form.identifier, password: form.password });
       } else {
-        data = await api.consumerLogin({ phone_number: form.identifier, password: form.password });
+        data = await api.consumerLogin({ first_name: form.identifier, password: form.password });
       }
       await login(data.user, data.token);
+      showSuccess('Signed in successfully');
     } catch (err) {
-      Alert.alert('Login Failed', err.message);
+      showError(err.message);
     } finally { setLoading(false); }
   };
 
@@ -34,11 +37,11 @@ const LoginScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{'\u2190'} Back</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.logo}>🌾</Text>
+          <Text style={styles.logo}>{'\u{1F33E}'}</Text>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to KrishiAnaj</Text>
         </View>
@@ -46,22 +49,23 @@ const LoginScreen = ({ navigation }) => {
         {/* Role Tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, role === 'farmer' && styles.activeTab]} onPress={() => setRole('farmer')}>
-            <Text style={[styles.tabText, role === 'farmer' && styles.activeTabText]}>🧑‍🌾 Farmer</Text>
+            <Text style={[styles.tabText, role === 'farmer' && styles.activeTabText]}>{'\u{1F9D1}\u200D\u{1F33E}'} Farmer</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, role === 'consumer' && styles.activeTab]} onPress={() => setRole('consumer')}>
-            <Text style={[styles.tabText, role === 'consumer' && styles.activeTabText]}>🛒 Consumer</Text>
+            <Text style={[styles.tabText, role === 'consumer' && styles.activeTabText]}>{'\u{1F6D2}'} Consumer</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
           <Input
-            label={role === 'farmer' ? 'First Name' : 'Phone Number'}
+            label="First Name"
             value={form.identifier}
             onChangeText={set('identifier')}
-            placeholder={role === 'farmer' ? 'Enter your first name' : '+91XXXXXXXXXX'}
-            keyboardType={role === 'consumer' ? 'phone-pad' : 'default'}
+            placeholder="Enter your first name"
+            keyboardType="default"
+            returnKeyType="next"
           />
-          <Input label="Password" value={form.password} onChangeText={set('password')} placeholder="Enter password" secureTextEntry />
+          <Input label="Password" value={form.password} onChangeText={set('password')} placeholder="Enter password" secureTextEntry returnKeyType="done" onSubmitEditing={handleLogin} />
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { role })} style={styles.forgot}>

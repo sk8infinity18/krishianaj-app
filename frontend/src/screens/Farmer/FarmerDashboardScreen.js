@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const StatCard = ({ label, value, icon, color }) => (
@@ -14,6 +15,7 @@ const StatCard = ({ label, value, icon, color }) => (
 
 const FarmerDashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { showError, showSuccess } = useSnackbar();
   const [earnings, setEarnings] = useState({ total_earnings: 0, monthly: [], top_crops: [] });
   const [orders, setOrders] = useState([]);
   const [listings, setListings] = useState([]);
@@ -29,7 +31,7 @@ const FarmerDashboardScreen = ({ navigation }) => {
       setEarnings(earningData);
       setOrders(orderData.orders || []);
       setListings(listingData.listings || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); showError(err.message); }
     finally { setRefreshing(false); }
   };
 
@@ -111,7 +113,7 @@ const FarmerDashboardScreen = ({ navigation }) => {
           </>
         )}
 
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+        <TouchableOpacity onPress={async () => { await logout(); showSuccess('Logged out successfully'); }} style={styles.logoutBtn}>
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>

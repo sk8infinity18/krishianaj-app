@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = "http://10.86.1.119:5000/api"; // Android emulator -> localhost
 // const BASE_URL = 'http://YOUR_LOCAL_IP:5000/api'; // Physical device
+const API_ORIGIN = BASE_URL.replace(/\/api$/, '');
 
 const getHeaders = async (isMultipart = false) => {
   const token = await AsyncStorage.getItem('token');
@@ -12,9 +13,23 @@ const getHeaders = async (isMultipart = false) => {
 };
 
 const handleResponse = async (res) => {
-  const data = await res.json();
+  let data = {};
+
+  try {
+    data = await res.json();
+  } catch (err) {
+    data = {};
+  }
+
   if (!res.ok) throw new Error(data.message || 'Request failed');
   return data;
+};
+
+export const resolveAssetUrl = (url) => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  if (url.startsWith('/')) return `${API_ORIGIN}${url}`;
+  return `${API_ORIGIN}/${url.replace(/^\/+/, '')}`;
 };
 
 export const api = {

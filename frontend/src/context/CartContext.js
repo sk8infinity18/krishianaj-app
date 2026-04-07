@@ -10,7 +10,12 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user?.role === 'consumer') fetchCart();
+    if (user?.role === 'consumer') {
+      fetchCart();
+    } else {
+      setCartItems([]);
+      setCartTotal(0);
+    }
   }, [user]);
 
   const fetchCart = async () => {

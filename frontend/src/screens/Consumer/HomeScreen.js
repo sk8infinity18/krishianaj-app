@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, FlatList, TouchableOpacity, TextInput, RefreshControl, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, SafeAreaView } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
+import { confirmAction } from '../../utils/confirmAction';
 import CropCard from '../../components/CropCard';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Grains', 'Pulses', 'Spices', 'Dairy', 'Oilseeds'];
 
 const HomeScreen = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { showError, showSuccess } = useSnackbar();
   const [listings, setListings] = useState([]);
-  const [featured, setFeatured] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -24,42 +25,60 @@ const HomeScreen = ({ navigation }) => {
       if (search) params.search = search;
       const data = await api.getListings(params);
       setListings(data.listings || []);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); setRefreshing(false); }
-  };
-
-  const fetchFeatured = async () => {
-    try {
-      const data = await api.getListings({ limit: 6 });
-      setFeatured(data.listings?.slice(0, 6) || []);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+      showError(err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => { fetchListings(); }, [selectedCat]);
-  useEffect(() => { fetchFeatured(); }, []);
 
-  const onRefresh = () => { setRefreshing(true); fetchListings(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchListings();
+  };
 
   const handleSearch = () => fetchListings();
 
+  const handleLogout = async () => {
+    const confirmed = await confirmAction('Logout', 'Do you want to log out?');
+    if (!confirmed) return;
+
+    try {
+      await logout();
+      showSuccess('Logged out successfully');
+    } catch (err) {
+      showError(err.message || 'Failed to log out');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Namaste, {user?.first_name}! 🙏</Text>
+          <Text style={styles.greeting}>Namaste, {user?.first_name}! {'\u{1F64F}'}</Text>
           <Text style={styles.headerSub}>Explore fresh produce from farmers</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
-          <Text style={styles.cartIcon}>🛒</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate('ConsumerProfile')} style={styles.headerActionBtn}>
+            <Text style={styles.headerActionText}>Edit Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.headerActionBtn}>
+            <Text style={styles.headerActionText}>Logout</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
+            <Text style={styles.cartIcon}>{'\u{1F6D2}'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {/* Search Bar */}
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
             <TextInput
               style={styles.searchInput}
               placeholder="Search crops, vegetables..."
@@ -70,21 +89,16 @@ const HomeScreen = ({ navigation }) => {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.filterBtn}>
-            <Text style={styles.filterIcon}>⚙️</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Hero Banner */}
         <View style={styles.heroBanner}>
           <View>
             <Text style={styles.heroTitle}>Fresh from the Farm</Text>
-            <Text style={styles.heroSub}>No middlemen. Fair prices. 🌿</Text>
+            <Text style={styles.heroSub}>No middlemen. Fair prices. {'\u{1F33F}'}</Text>
           </View>
-          <Text style={styles.heroEmoji}>🚜</Text>
+          <Text style={styles.heroEmoji}>{'\u{1F69C}'}</Text>
         </View>
 
-        {/* Categories */}
         <Text style={styles.sectionTitle}>Browse by Category</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
           {CATEGORIES.map(cat => (
@@ -94,14 +108,13 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </ScrollView>
 
-        {/* Listings */}
         <View style={styles.listingsSection}>
           <Text style={styles.sectionTitle}>{selectedCat === 'All' ? 'All Produce' : selectedCat}</Text>
           {loading ? (
-            <Text style={styles.loadingText}>Loading fresh produce... 🌱</Text>
+            <Text style={styles.loadingText}>Loading fresh produce... {'\u{1F331}'}</Text>
           ) : listings.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🌾</Text>
+              <Text style={styles.emptyEmoji}>{'\u{1F33E}'}</Text>
               <Text style={styles.emptyText}>No produce found</Text>
               <Text style={styles.emptySubText}>Try a different category or search term</Text>
             </View>
@@ -121,14 +134,22 @@ const styles = StyleSheet.create({
   header: { backgroundColor: Colors.primary, padding: Spacing.xl, paddingBottom: Spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   greeting: { ...Typography.h2, color: Colors.textLight },
   headerSub: { ...Typography.bodySmall, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  headerActionBtn: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: Radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionText: { ...Typography.bodySmall, color: Colors.textLight, fontWeight: '600' },
   cartBtn: { backgroundColor: 'rgba(255,255,255,0.2)', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   cartIcon: { fontSize: 20 },
   searchRow: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: Spacing.md, borderWidth: 1.5, borderColor: Colors.border, ...Shadow.sm },
   searchIcon: { fontSize: 16, marginRight: 8 },
-  searchInput: { flex: 1, paddingVertical: 12, ...Typography.bodyMedium, color: Colors.textPrimary },
-  filterBtn: { backgroundColor: Colors.primary, width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  filterIcon: { fontSize: 20 },
+  searchInput: { flex: 1, paddingVertical: 12, ...Typography.bodyMedium, color: Colors.textPrimary, outlineStyle: 'none' },
   heroBanner: { marginHorizontal: Spacing.md, borderRadius: Radius.xl, backgroundColor: Colors.primaryDark, padding: Spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   heroTitle: { ...Typography.h2, color: Colors.textLight },
   heroSub: { ...Typography.bodySmall, color: Colors.secondaryLight, marginTop: 4 },

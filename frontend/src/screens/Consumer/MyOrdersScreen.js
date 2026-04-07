@@ -16,6 +16,14 @@ const MyOrdersScreen = ({ navigation }) => {
     api.getConsumerOrders(filter !== 'all' ? { status: filter } : {}).then(d => setOrders(d.orders || [])).finally(() => setLoading(false));
   }, [filter]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setLoading(true);
+      api.getConsumerOrders(filter !== 'all' ? { status: filter } : {}).then(d => setOrders(d.orders || [])).finally(() => setLoading(false));
+    });
+    return unsubscribe;
+  }, [navigation, filter]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}><Text style={styles.headerTitle}>My Orders</Text></View>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
 import { api } from '../../services/api';
+import { useSnackbar } from '../../context/SnackbarContext';
+import { confirmAction } from '../../utils/confirmAction';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const NEXT_STATUS = { pending: 'confirmed', confirmed: 'processing', processing: 'dispatched', dispatched: 'delivered' };
@@ -8,50 +10,75 @@ const STATUS_COLORS = { pending: Colors.warning, confirmed: Colors.info, process
 const FILTERS = ['all', 'pending', 'confirmed', 'processing', 'dispatched', 'delivered'];
 
 const FarmerOrdersScreen = ({ navigation }) => {
+  const { showSuccess, showError } = useSnackbar();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   const fetchOrders = () => {
-    api.getFarmerOrders(filter !== 'all' ? { status: filter } : {}).then(d => setOrders(d.orders || [])).finally(() => setLoading(false));
+    api.getFarmerOrders(filter !== 'all' ? { status: filter } : {}).then((data) => {
+      setOrders(data.orders || []);
+    }).catch((err) => {
+      showError(err.message);
+    }).finally(() => {
+      setLoading(false);
+    });
   };
 
   useEffect(() => { fetchOrders(); }, [filter]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', fetchOrders);
+    return unsubscribe;
+  }, [navigation, filter]);
 
-  const handleUpdateStatus = (order) => {
+  const handleUpdateStatus = async (order) => {
     const next = NEXT_STATUS[order.status];
     if (!next) return;
-    Alert.alert('Update Status', `Mark as "${next}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Update', onPress: async () => {
-        try { await api.updateOrderStatus(order.id, next); fetchOrders(); }
-        catch (err) { Alert.alert('Error', err.message); }
-      }}
-    ]);
+
+    const confirmed = await confirmAction('Update Status', `Mark as "${next}"?`);
+    if (!confirmed) return;
+
+    try {
+      const data = await api.updateOrderStatus(order.id, next);
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, ...data.order } : item));
+      showSuccess(`Order marked as ${next}`);
+      fetchOrders();
+    } catch (err) {
+      showError(err.message);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>{'\u2190'}</Text></TouchableOpacity>
         <Text style={styles.headerTitle}>Incoming Orders</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.filterBar}>
-        <FlatList horizontal data={FILTERS} keyExtractor={i => i} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterList}
+        <FlatList
+          horizontal
+          data={FILTERS}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterList}
           renderItem={({ item }) => (
             <TouchableOpacity style={[styles.filterChip, filter === item && styles.activeChip]} onPress={() => setFilter(item)}>
               <Text style={[styles.filterText, filter === item && styles.activeChipText]}>{item.charAt(0).toUpperCase() + item.slice(1)}</Text>
             </TouchableOpacity>
-          )} />
+          )}
+        />
       </View>
 
-      {loading ? <Text style={styles.loadingText}>Loading orders... ⏳</Text> :
+      {loading ? <Text style={styles.loadingText}>Loading orders... {'\u23F3'}</Text> :
         orders.length === 0 ? (
-          <View style={styles.empty}><Text style={styles.emptyEmoji}>📦</Text><Text style={styles.emptyText}>No {filter} orders</Text></View>
+          <View style={styles.empty}><Text style={styles.emptyEmoji}>{'\u{1F4E6}'}</Text><Text style={styles.emptyText}>No {filter} orders</Text></View>
         ) : (
-          <FlatList data={orders} keyExtractor={i => i.id} contentContainerStyle={{ padding: Spacing.md }}
+          <FlatList
+            data={orders}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: Spacing.md }}
             renderItem={({ item }) => (
               <View style={styles.orderCard}>
                 <View style={styles.orderTop}>
@@ -65,21 +92,22 @@ const FarmerOrdersScreen = ({ navigation }) => {
                 </View>
 
                 <Text style={styles.cropName}>{item.crop_name}</Text>
-                <Text style={styles.consumerName}>👤 {item.consumer_name} • 📞 {item.consumer_phone}</Text>
-                <Text style={styles.orderDetail}>{item.quantity} {item.unit} @ ₹{item.price_per_unit}/{item.unit}</Text>
+                <Text style={styles.consumerName}>{'\u{1F464}'} {item.consumer_name} {'\u2022'} {'\u{1F4DE}'} {item.consumer_phone}</Text>
+                <Text style={styles.orderDetail}>{item.quantity} {item.unit} @ {'\u20B9'}{item.price_per_unit}/{item.unit}</Text>
 
                 <View style={styles.amountRow}>
-                  <Text style={styles.totalAmount}>₹{parseFloat(item.total_amount).toFixed(2)}</Text>
+                  <Text style={styles.totalAmount}>{'\u20B9'}{parseFloat(item.total_amount).toFixed(2)}</Text>
                   <Text style={styles.paymentMethod}>{item.payment_method?.toUpperCase()}</Text>
                 </View>
 
                 {NEXT_STATUS[item.status] && (
                   <TouchableOpacity style={styles.updateBtn} onPress={() => handleUpdateStatus(item)}>
-                    <Text style={styles.updateBtnText}>Mark as {NEXT_STATUS[item.status]} →</Text>
+                    <Text style={styles.updateBtnText}>Mark as {NEXT_STATUS[item.status]} {'\u2192'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            )} />
+            )}
+          />
         )}
     </SafeAreaView>
   );

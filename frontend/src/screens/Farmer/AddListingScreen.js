@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Alert,
-  SafeAreaView, TouchableOpacity, Image
+  SafeAreaView, TouchableOpacity, Image, Platform
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../services/api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const AddListingScreen = ({ navigation }) => {
+  const { showSuccess, showError, showWarning } = useSnackbar();
   const [form, setForm] = useState({
     crop_name: '',
     quantity: '',
@@ -20,6 +22,18 @@ const AddListingScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
+  const getImagePayload = (asset, prefix) => {
+    const extension = asset.fileName?.split('.').pop() || asset.uri?.split('.').pop() || 'jpg';
+    const name = asset.fileName || `${prefix}_${Date.now()}.${extension}`;
+    const mimeType = asset.mimeType || asset.type || 'image/jpeg';
+
+    return {
+      ...asset,
+      fileName: name,
+      type: mimeType,
+      mimeType,
+    };
+  };
 
   // 📸 Camera
   const pickFromCamera = async () => {
@@ -35,11 +49,7 @@ const AddListingScreen = ({ navigation }) => {
     });
 
     if (!result.canceled) {
-      const img = {
-        uri: result.assets[0].uri,
-        type: 'image/jpeg',
-        fileName: `camera_${Date.now()}.jpg`
-      };
+      const img = getImagePayload(result.assets[0], 'camera');
 
       setImages(prev => [...prev, img].slice(0, 5));
     }
@@ -62,11 +72,10 @@ const AddListingScreen = ({ navigation }) => {
     });
 
     if (!result.canceled) {
-      const selected = result.assets.map(a => ({
-        uri: a.uri,
-        type: 'image/jpeg',
-        fileName: `image_${Date.now()}.jpg`
-      }));
+      const selected = result.assets.map((asset, index) => getImagePayload({
+        ...asset,
+        fileName: asset.fileName || `image_${Date.now()}_${index}.${asset.uri?.split('.').pop() || 'jpg'}`,
+      }, 'image'));
 
       setImages(prev => [...prev, ...selected].slice(0, 5));
     }
@@ -78,7 +87,8 @@ const AddListingScreen = ({ navigation }) => {
 
 const handleSubmit = async () => {
   if (!form.crop_name || !form.quantity || !form.price_per_unit) {
-    return Alert.alert("Error", "Fill all required fields");
+    showWarning('Fill all required fields');
+    return;
   }
 
   setLoading(true);
@@ -93,7 +103,12 @@ const handleSubmit = async () => {
     formData.append("unit", form.unit || "kg"); // 🔥 DEFAULT
     formData.append("price_per_unit", form.price_per_unit);
 
-    images.forEach((img, i) => {
+    images.forEach((img) => {
+      if (Platform.OS === 'web' && img.file) {
+        formData.append('images', img.file, img.fileName);
+        return;
+      }
+
       formData.append("images", {
         uri: img.uri,
         type: img.type,
@@ -101,13 +116,12 @@ const handleSubmit = async () => {
       });
     });
 
-    const res = await api.createListing(formData);
-
-    Alert.alert("Success 🎉", "Listing created");
-
+    await api.createListing(formData);
+    showSuccess('Listing added successfully');
+    navigation.reset({ index: 0, routes: [{ name: 'FarmerMain' }] });
   } catch (err) {
     console.error(err);
-    Alert.alert("Error", err.message);
+    showError(err.message);
   } finally {
     setLoading(false);
   }
@@ -117,16 +131,16 @@ const handleSubmit = async () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        <Text style={styles.title}>List Your Crop 🌾</Text>
+        <Text style={styles.title}>List Your Crop {'\u{1F33E}'}</Text>
 
         {/* Image Buttons */}
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.btn} onPress={pickFromCamera}>
-            <Text>📷 Camera</Text>
+            <Text>{'\u{1F4F7}'} Camera</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.btn} onPress={pickFromGallery}>
-            <Text>🖼 Gallery</Text>
+            <Text>{'\u{1F5BC}'} Gallery</Text>
           </TouchableOpacity>
         </View>
 
@@ -144,18 +158,24 @@ const handleSubmit = async () => {
           label="Crop Name *"
           value={form.crop_name}
           onChangeText={set('crop_name')}
+          returnKeyType="next"
         />
 
         <Input
           label="Quantity *"
           value={form.quantity}
           onChangeText={set('quantity')}
+          keyboardType="numeric"
+          returnKeyType="next"
         />
 
         <Input
           label="Price per Unit *"
           value={form.price_per_unit}
           onChangeText={set('price_per_unit')}
+          keyboardType="numeric"
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
         />
 
         <Button

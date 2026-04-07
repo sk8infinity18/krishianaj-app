@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing } from '../../theme';
 
 const ConsumerRegisterScreen = ({ navigation }) => {
   const { login } = useAuth();
+  const { showError, showWarning, showSuccess } = useSnackbar();
   const [form, setForm] = useState({ first_name: '', last_name: '', phone_number: '', email: '', password: '', confirm_password: '', delivery_city: '', delivery_state: '' });
   const [loading, setLoading] = useState(false);
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleRegister = async () => {
     if (!form.first_name || !form.last_name || !form.phone_number || !form.password)
-      return Alert.alert('Missing Info', 'Please fill all required fields');
+      return showWarning('Please fill all required fields');
     if (form.password !== form.confirm_password)
-      return Alert.alert('Password Mismatch', 'Passwords do not match');
+      return showWarning('Passwords do not match');
     setLoading(true);
     try {
       const data = await api.consumerRegister(form);
       await login(data.user, data.token);
+      showSuccess('Account created successfully');
     } catch (err) {
-      Alert.alert('Registration Failed', err.message);
+      showError(err.message);
     } finally { setLoading(false); }
   };
 

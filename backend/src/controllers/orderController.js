@@ -6,41 +6,48 @@ const generateOrderNumber = () => `KA${Date.now().toString().slice(-8)}${Math.fl
 const placeOrder = async (req, res) => {
   const client = await getClient();
   try {
-    await client.query('BEGIN');
     const consumer_id = req.user.id;
     const { listing_id, quantity, delivery_address, delivery_city, delivery_state, delivery_pincode, notes, payment_method } = req.body;
+    const parsedQuantity = parseFloat(quantity);
 
     if (!listing_id || !quantity || !delivery_address)
       return res.status(400).json({ success: false, message: 'listing_id, quantity, delivery_address required' });
+    if (Number.isNaN(parsedQuantity) || parsedQuantity <= 0)
+      return res.status(400).json({ success: false, message: 'Quantity must be greater than 0' });
+
+    await client.query('BEGIN');
+    const rollbackAndRespond = async (statusCode, message) => {
+      await client.query('ROLLBACK');
+      return res.status(statusCode).json({ success: false, message });
+    };
 
     const listingRes = await client.query(
       `SELECT * FROM crop_listings WHERE id = $1 AND is_available = TRUE AND is_active = TRUE FOR UPDATE`, [listing_id]);
-    if (!listingRes.rows[0]) return res.status(404).json({ success: false, message: 'Listing not found or unavailable' });
+    if (!listingRes.rows[0]) return rollbackAndRespond(404, 'Listing not found or unavailable');
 
     const listing = listingRes.rows[0];
-    if (parseFloat(quantity) < listing.min_order_quantity)
-      return res.status(400).json({ success: false, message: `Minimum order is ${listing.min_order_quantity} ${listing.unit}` });
-    if (parseFloat(quantity) > listing.quantity)
-      return res.status(400).json({ success: false, message: `Only ${listing.quantity} ${listing.unit} available` });
+    if (parsedQuantity < listing.min_order_quantity)
+      return rollbackAndRespond(400, `Minimum order is ${listing.min_order_quantity} ${listing.unit}`);
+    if (parsedQuantity > listing.quantity)
+      return rollbackAndRespond(400, `Only ${listing.quantity} ${listing.unit} available`);
 
-    const total_amount = parseFloat(quantity) * parseFloat(listing.price_per_unit);
+    const total_amount = parsedQuantity * parseFloat(listing.price_per_unit);
     const order_number = generateOrderNumber();
-    const expected_delivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 
     const orderRes = await client.query(
       `INSERT INTO orders (order_number, consumer_id, farmer_id, listing_id, quantity, unit, price_per_unit, total_amount,
-        delivery_address, delivery_city, delivery_state, delivery_pincode, notes, payment_method, expected_delivery)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [order_number, consumer_id, listing.farmer_id, listing_id, parseFloat(quantity), listing.unit,
+        delivery_address, delivery_city, delivery_state, delivery_pincode, notes, payment_method)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [order_number, consumer_id, listing.farmer_id, listing_id, parsedQuantity, listing.unit,
         listing.price_per_unit, total_amount, delivery_address, delivery_city||null, delivery_state||null,
-        delivery_pincode||null, notes||null, payment_method||'cod', expected_delivery]
+        delivery_pincode||null, notes||null, payment_method||'cod']
     );
 
     // Update listing quantity
-    const newQty = parseFloat(listing.quantity) - parseFloat(quantity);
+    const newQty = parseFloat(listing.quantity) - parsedQuantity;
     await client.query(
       `UPDATE crop_listings SET quantity = $1, total_sold = total_sold + $2, is_available = $3, updated_at = NOW() WHERE id = $4`,
-      [newQty, parseFloat(quantity), newQty > 0, listing_id]
+      [newQty, parsedQuantity, newQty > 0, listing_id]
     );
 
     await client.query('COMMIT');
@@ -105,17 +112,35 @@ const updateOrderStatus = async (req, res) => {
     if (!validStatuses.includes(status))
       return res.status(400).json({ success: false, message: 'Invalid status' });
 
-    const extra = status === 'delivered' ? `, delivered_at = NOW()` : status === 'cancelled' ? `, cancelled_at = NOW()` : '';
+    const existingOrder = await query(`SELECT id, status, total_amount FROM orders WHERE id = $1 AND farmer_id = $2`, [id, req.user.id]);
+    if (!existingOrder.rows[0]) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const currentStatus = existingOrder.rows[0].status;
+    const allowedTransitions = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['processing', 'cancelled'],
+      processing: ['dispatched', 'cancelled'],
+      dispatched: ['delivered'],
+      delivered: [],
+      cancelled: [],
+    };
+
+    if (currentStatus === status) {
+      return res.json({ success: true, message: 'Order status updated', order: existingOrder.rows[0] });
+    }
+
+    if (!allowedTransitions[currentStatus]?.includes(status)) {
+      return res.status(400).json({ success: false, message: `Cannot change order from ${currentStatus} to ${status}` });
+    }
+
     const result = await query(
-      `UPDATE orders SET status = $1${extra}, updated_at = NOW() WHERE id = $2 AND farmer_id = $3 RETURNING *`,
+      `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND farmer_id = $3 RETURNING *`,
       [status, id, req.user.id]
     );
-    if (!result.rows[0]) return res.status(404).json({ success: false, message: 'Order not found' });
 
     // Update earnings on delivery
     if (status === 'delivered') {
       await query(`UPDATE farmers SET total_earnings = total_earnings + $1 WHERE id = $2`, [result.rows[0].total_amount, req.user.id]);
-      await query(`UPDATE orders SET payment_status = 'paid' WHERE id = $1`, [id]);
     }
 
     res.json({ success: true, message: 'Order status updated', order: result.rows[0] });

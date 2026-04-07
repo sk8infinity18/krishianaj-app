@@ -1,18 +1,32 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, Image } from 'react-native';
 import { useCart } from '../../context/CartContext';
+import { useSnackbar } from '../../context/SnackbarContext';
+import { resolveAssetUrl } from '../../services/api';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const CartScreen = ({ navigation }) => {
   const { cartItems, cartTotal, fetchCart, removeItem } = useCart();
+  const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => { fetchCart(); }, []);
 
   const handleRemove = (id, name) => {
     Alert.alert('Remove Item', `Remove ${name} from cart?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeItem(id) }
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeItem(id);
+            showSuccess('Removed from cart');
+          } catch (err) {
+            showError(err.message);
+          }
+        }
+      }
     ]);
   };
 
@@ -38,7 +52,7 @@ const CartScreen = ({ navigation }) => {
         contentContainerStyle={{ padding: Spacing.md }}
         renderItem={({ item }) => (
           <View style={styles.cartItem}>
-            {item.images?.[0] ? <Image source={{ uri: item.images[0] }} style={styles.itemImg} /> : <View style={styles.itemImgPlaceholder}><Text style={{ fontSize: 28 }}>🌾</Text></View>}
+            {item.images?.[0] ? <Image source={{ uri: resolveAssetUrl(item.images[0]) }} style={styles.itemImg} /> : <View style={styles.itemImgPlaceholder}><Text style={{ fontSize: 28 }}>🌾</Text></View>}
             <View style={{ flex: 1, marginLeft: Spacing.md }}>
               <Text style={styles.itemName}>{item.crop_name}</Text>
               <Text style={styles.itemFarmer}>{item.farmer_name}</Text>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
@@ -16,6 +17,7 @@ const PAYMENT_METHODS = [
 const PlaceOrderScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { cartItems, cartTotal, clear } = useCart();
+  const { showSuccess, showError, showWarning } = useSnackbar();
   const [address, setAddress] = useState(user?.delivery_address || '');
   const [city, setCity] = useState(user?.delivery_city || '');
   const [state, setState] = useState(user?.delivery_state || '');
@@ -25,7 +27,14 @@ const PlaceOrderScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handlePlaceOrders = async () => {
-    if (!address || !city) return Alert.alert('Missing Info', 'Please enter delivery address');
+    if (!address || !city) {
+      showWarning('Please enter delivery address');
+      return;
+    }
+    if (cartItems.length === 0) {
+      showWarning('Your cart is empty');
+      return;
+    }
     setLoading(true);
     try {
       // Place order for each cart item
@@ -43,10 +52,9 @@ const PlaceOrderScreen = ({ navigation }) => {
       );
       await Promise.all(promises);
       await clear();
-      Alert.alert('Order Placed! 🎉', 'Your orders have been placed successfully. Farmers will confirm soon.', [
-        { text: 'View Orders', onPress: () => navigation.navigate('MyOrders') }
-      ]);
-    } catch (err) { Alert.alert('Error', err.message); }
+      showSuccess('Order placed successfully');
+      navigation.reset({ index: 0, routes: [{ name: 'ConsumerMain' }] });
+    } catch (err) { showError(err.message); }
     finally { setLoading(false); }
   };
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Alert, SafeAreaView, Dimensions } from 'react-native';
-import { api } from '../../services/api';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { api, resolveAssetUrl } from '../../services/api';
 import { useCart } from '../../context/CartContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
@@ -10,6 +11,7 @@ const { width } = Dimensions.get('window');
 const ProductDetailScreen = ({ navigation, route }) => {
   const { id } = route.params;
   const { addItem } = useCart();
+  const { showSuccess, showError } = useSnackbar();
   const [listing, setListing] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [quantity, setQuantity] = useState(1);
@@ -25,17 +27,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
     setAddingToCart(true);
     try {
       await addItem(id, quantity);
-      Alert.alert('Added to Cart!', `${quantity} ${listing.unit} of ${listing.crop_name} added`, [
-        { text: 'View Cart', onPress: () => navigation.navigate('Cart') }, { text: 'Continue Shopping' }
-      ]);
-    } catch (err) { Alert.alert('Error', err.message); }
+      showSuccess('Added to cart');
+    } catch (err) { showError(err.message); }
     finally { setAddingToCart(false); }
   };
 
   if (loading) return <View style={styles.center}><Text>Loading... 🌱</Text></View>;
   if (!listing) return <View style={styles.center}><Text>Product not found</Text></View>;
 
-  const images = listing.images?.length ? listing.images : [];
+  const images = listing.images?.length ? listing.images.map(resolveAssetUrl) : [];
   const total = (quantity * parseFloat(listing.price_per_unit)).toFixed(2);
 
   return (
@@ -77,7 +77,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
           {/* Farmer */}
           <TouchableOpacity style={styles.farmerCard} onPress={() => navigation.navigate('FarmerProfile', { id: listing.farmer_id })}>
             <View style={styles.farmerAvatarWrap}>
-              {listing.farmer_image ? <Image source={{ uri: listing.farmer_image }} style={styles.farmerAvatar} /> : <View style={styles.farmerAvatarPlaceholder}><Text style={{ fontSize: 24 }}>🧑‍🌾</Text></View>}
+              {listing.farmer_image ? <Image source={{ uri: resolveAssetUrl(listing.farmer_image) }} style={styles.farmerAvatar} /> : <View style={styles.farmerAvatarPlaceholder}><Text style={{ fontSize: 24 }}>🧑‍🌾</Text></View>}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.farmerName}>{listing.farmer_name}</Text>

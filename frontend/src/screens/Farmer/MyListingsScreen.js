@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, Image, Switch } from 'react-native';
-import { api } from '../../services/api';
+import { api, resolveAssetUrl } from '../../services/api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const MyListingsScreen = ({ navigation }) => {
+  const { showSuccess, showError } = useSnackbar();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,13 +24,26 @@ const MyListingsScreen = ({ navigation }) => {
     try {
       await api.updateListing(id, { is_available: !current });
       setListings(prev => prev.map(l => l.id === id ? { ...l, is_available: !current } : l));
-    } catch (err) { Alert.alert('Error', err.message); }
+      showSuccess(!current ? 'Listing is live now' : 'Listing has been turned off');
+    } catch (err) { showError(err.message); }
   };
 
   const handleDelete = (id, name) => {
     Alert.alert('Delete Listing', `Delete "${name}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteListing(id); fetchListings(); } }
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteListing(id);
+            showSuccess('Listing deleted successfully');
+            fetchListings();
+          } catch (err) {
+            showError(err.message);
+          }
+        }
+      }
     ]);
   };
 
@@ -52,7 +67,7 @@ const MyListingsScreen = ({ navigation }) => {
             renderItem={({ item }) => (
               <View style={[styles.card, !item.is_available && styles.cardInactive]}>
                 <View style={styles.cardRow}>
-                  {item.images?.[0] ? <Image source={{ uri: item.images[0] }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 28 }}>🌾</Text></View>}
+                  {item.images?.[0] ? <Image source={{ uri: resolveAssetUrl(item.images[0]) }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 28 }}>🌾</Text></View>}
                   <View style={styles.info}>
                     <Text style={styles.cropName}>{item.crop_name}</Text>
                     <Text style={styles.category}>{item.category} • Grade {item.quality_grade}</Text>

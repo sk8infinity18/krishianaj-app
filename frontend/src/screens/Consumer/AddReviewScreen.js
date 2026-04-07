@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { api } from '../../services/api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const { order } = route.params;
+  const { showError, showWarning, showSuccess } = useSnackbar();
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (rating === 0) return Alert.alert('Rating required', 'Please select a star rating');
+    if (rating === 0) return showWarning('Please select a star rating');
     setLoading(true);
     try {
       await api.addReview({ order_id: order.id, rating, review_text: reviewText });
-      Alert.alert('Review Submitted! ⭐', 'Thank you for your feedback', [{ text: 'OK', onPress: () => navigation.goBack() }]);
-    } catch (err) { Alert.alert('Error', err.message); }
+      showSuccess('Review submitted successfully');
+      navigation.goBack();
+    } catch (err) { showError(err.message); }
     finally { setLoading(false); }
   };
 

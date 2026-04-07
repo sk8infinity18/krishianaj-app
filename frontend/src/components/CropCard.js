@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { resolveAssetUrl } from '../services/api';
 import { Colors, Typography, Radius, Shadow, Spacing } from '../theme';
 
 const CropCard = ({ listing, onPress, compact = false }) => {
-  const image = listing.images?.[0];
+  const image = resolveAssetUrl(listing.images?.[0]);
   const grade = listing.quality_grade || 'A';
   const gradeColor = grade === 'A' ? Colors.success : grade === 'B' ? Colors.warning : Colors.textMuted;
 

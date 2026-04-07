@@ -4,14 +4,16 @@ import {
   TouchableOpacity, Alert, SafeAreaView, Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api } from '../../services/api';
+import { api, resolveAssetUrl } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
 const FarmerProfileScreen = ({ navigation, route }) => {
   const { updateUser, logout } = useAuth();
+  const { showSuccess, showError } = useSnackbar();
   const viewId = route.params?.id;
   const isOwnProfile = !viewId;
 
@@ -84,10 +86,10 @@ const FarmerProfileScreen = ({ navigation, route }) => {
       setProfile(prev => ({ ...prev, ...data.profile }));
       setEditing(false);
 
-      Alert.alert('Saved!', 'Profile updated successfully');
+      showSuccess('Profile updated successfully');
 
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showError(err.message);
     } finally {
       setLoading(false);
     }
@@ -101,7 +103,7 @@ const FarmerProfileScreen = ({ navigation, route }) => {
     );
   }
 
-  const avatarUri = profileImg?.uri || profile.profile_image;
+  const avatarUri = profileImg?.uri || resolveAssetUrl(profile.profile_image);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,7 +151,7 @@ const FarmerProfileScreen = ({ navigation, route }) => {
 
         {!editing ? (
           <>
-            <Button title="Sign Out" onPress={logout} />
+            <Button title="Sign Out" onPress={async () => { await logout(); showSuccess('Logged out successfully'); }} />
           </>
         ) : (
           <>

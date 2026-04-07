@@ -91,16 +91,23 @@ const farmerLogin = async (req, res) => {
 // ── CONSUMER LOGIN (by phone + password) ────────────────────────────────
 const consumerLogin = async (req, res) => {
   try {
-    const { phone_number, password } = req.body;
-    if (!phone_number || !password)
-      return res.status(400).json({ success: false, message: 'Phone number and password are required' });
+    const { first_name, password } = req.body;
+    if (!first_name || !password)
+      return res.status(400).json({ success: false, message: 'First name and password are required' });
 
-    const result = await query(`SELECT * FROM consumers WHERE phone_number = $1 AND is_active = TRUE`, [phone_number]);
-    if (!result.rows[0]) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    const result = await query(`SELECT * FROM consumers WHERE LOWER(first_name) = LOWER($1) AND is_active = TRUE LIMIT 5`, [first_name]);
+    if (!result.rows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
-    const consumer = result.rows[0];
-    const match = await bcrypt.compare(password, consumer.password_hash);
-    if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    let consumer = null;
+    for (const row of result.rows) {
+      const match = await bcrypt.compare(password, row.password_hash);
+      if (match) {
+        consumer = row;
+        break;
+      }
+    }
+
+    if (!consumer) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
     const token = generateToken({ id: consumer.id, role: 'consumer', phone: consumer.phone_number });
     const { password_hash, ...consumerData } = consumer;
