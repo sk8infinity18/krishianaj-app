@@ -1,0 +1,183 @@
+const { pool } = require('./db');
+
+const setupDatabase = async () => {
+  const client = await pool.connect();
+  try {
+    console.log('Setting up KrishiAnaj database...');
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS farmers (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone_number VARCHAR(15) UNIQUE NOT NULL,
+        farmer_id VARCHAR(50) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        profile_image TEXT,
+        farm_name VARCHAR(200),
+        farm_location TEXT,
+        farm_state VARCHAR(100),
+        farm_district VARCHAR(100),
+        farm_pincode VARCHAR(10),
+        bio TEXT,
+        total_earnings DECIMAL(12,2) DEFAULT 0,
+        rating DECIMAL(3,2) DEFAULT 0,
+        total_reviews INTEGER DEFAULT 0,
+        is_verified BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS consumers (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone_number VARCHAR(15) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        profile_image TEXT,
+        delivery_address TEXT,
+        delivery_city VARCHAR(100),
+        delivery_state VARCHAR(100),
+        delivery_pincode VARCHAR(10),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS crop_listings (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        farmer_id UUID NOT NULL REFERENCES farmers(id) ON DELETE CASCADE,
+        crop_name VARCHAR(200) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        description TEXT,
+        quantity DECIMAL(10,2) NOT NULL,
+        unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+        price_per_unit DECIMAL(10,2) NOT NULL,
+        min_order_quantity DECIMAL(10,2) DEFAULT 1,
+        harvest_date DATE,
+        available_from DATE DEFAULT CURRENT_DATE,
+        available_until DATE,
+        quality_grade VARCHAR(10) DEFAULT 'A',
+        organic BOOLEAN DEFAULT FALSE,
+        images TEXT[],
+        location TEXT,
+        state VARCHAR(100),
+        district VARCHAR(100),
+        pincode VARCHAR(10),
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8),
+        total_sold DECIMAL(10,2) DEFAULT 0,
+        is_available BOOLEAN DEFAULT TRUE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        order_number VARCHAR(20) UNIQUE NOT NULL,
+        consumer_id UUID NOT NULL REFERENCES consumers(id) ON DELETE CASCADE,
+        farmer_id UUID NOT NULL REFERENCES farmers(id) ON DELETE CASCADE,
+        listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
+        quantity DECIMAL(10,2) NOT NULL,
+        unit VARCHAR(20) NOT NULL,
+        price_per_unit DECIMAL(10,2) NOT NULL,
+        total_amount DECIMAL(12,2) NOT NULL,
+        delivery_address TEXT NOT NULL,
+        delivery_city VARCHAR(100),
+        delivery_state VARCHAR(100),
+        delivery_pincode VARCHAR(10),
+        status VARCHAR(30) DEFAULT 'pending',
+        payment_status VARCHAR(20) DEFAULT 'pending',
+        payment_method VARCHAR(30),
+        payment_transaction_id VARCHAR(255),
+        notes TEXT,
+        expected_delivery DATE,
+        delivered_at TIMESTAMP,
+        cancelled_at TIMESTAMP,
+        cancellation_reason TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        order_id UUID UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        consumer_id UUID NOT NULL REFERENCES consumers(id) ON DELETE CASCADE,
+        farmer_id UUID NOT NULL REFERENCES farmers(id) ON DELETE CASCADE,
+        listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        review_text TEXT,
+        images TEXT[],
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS otps (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        phone_number VARCHAR(15) NOT NULL,
+        otp_code VARCHAR(6) NOT NULL,
+        purpose VARCHAR(20) NOT NULL DEFAULT 'password_reset',
+        user_type VARCHAR(20) NOT NULL,
+        attempts INTEGER DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        is_used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cart_items (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        consumer_id UUID NOT NULL REFERENCES consumers(id) ON DELETE CASCADE,
+        listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
+        quantity DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(consumer_id, listing_id)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS wishlist (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        consumer_id UUID NOT NULL REFERENCES consumers(id) ON DELETE CASCADE,
+        listing_id UUID NOT NULL REFERENCES crop_listings(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(consumer_id, listing_id)
+      );
+    `);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_listings_farmer ON crop_listings(farmer_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_listings_category ON crop_listings(category);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_listings_state ON crop_listings(state);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_orders_consumer ON orders(consumer_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_orders_farmer ON orders(farmer_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_reviews_farmer ON reviews(farmer_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_otps_phone ON otps(phone_number, is_used);`);
+
+    console.log('All tables created successfully!');
+    console.log('KrishiAnaj database is ready!');
+  } catch (err) {
+    console.error('Database setup failed:', err);
+    throw err;
+  } finally {
+    client.release();
+    pool.end();
+  }
+};
+
+setupDatabase().catch(console.error);
