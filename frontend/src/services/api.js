@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = "http://10.86.1.119:5000/api"; // Android emulator -> localhost
-// const BASE_URL = 'http://YOUR_LOCAL_IP:5000/api'; // Physical device
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 const API_ORIGIN = BASE_URL.replace(/\/api$/, '');
 
 const getHeaders = async (isMultipart = false) => {
