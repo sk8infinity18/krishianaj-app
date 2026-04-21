@@ -10,12 +10,12 @@ import { Colors, Typography, Spacing, Radius } from '../../theme';
 const FarmerRegisterScreen = ({ navigation }) => {
   const { login } = useAuth();
   const { showError, showWarning, showSuccess } = useSnackbar();
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone_number: '', farmer_id: '', password: '', confirm_password: '', farm_name: '', farm_state: '', farm_district: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', farmer_id: '', password: '', confirm_password: '', farm_name: '', farm_state: '', farm_district: '' });
   const [loading, setLoading] = useState(false);
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleRegister = async () => {
-    if (!form.first_name || !form.last_name || !form.phone_number || !form.farmer_id || !form.password)
+    if (!form.first_name || !form.last_name || !form.farmer_id || !form.password)
       return showWarning('Please fill all required fields');
     if (form.password !== form.confirm_password)
       return showWarning('Passwords do not match');
@@ -51,7 +51,6 @@ const FarmerRegisterScreen = ({ navigation }) => {
             <Input label="First Name *" value={form.first_name} onChangeText={set('first_name')} placeholder="Rajesh" style={styles.half} />
             <Input label="Last Name *" value={form.last_name} onChangeText={set('last_name')} placeholder="Kumar" style={styles.half} />
           </View>
-          <Input label="Phone Number *" value={form.phone_number} onChangeText={set('phone_number')} placeholder="+91XXXXXXXXXX" keyboardType="phone-pad" />
           <Input label="Farmer ID (Govt. Issued) *" value={form.farmer_id} onChangeText={set('farmer_id')} placeholder="e.g. PM-KISAN / State ID" />
         </View>
 

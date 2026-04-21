@@ -11,7 +11,6 @@ import WelcomeScreen from '../screens/Auth/WelcomeScreen';
 import FarmerRegisterScreen from '../screens/Auth/FarmerRegisterScreen';
 import ConsumerRegisterScreen from '../screens/Auth/ConsumerRegisterScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
-import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen';
 
 // Farmer Screens
 import FarmerDashboardScreen from '../screens/Farmer/FarmerDashboardScreen';
@@ -20,6 +19,7 @@ import MyListingsScreen from '../screens/Farmer/MyListingsScreen';
 import FarmerOrdersScreen from '../screens/Farmer/FarmerOrdersScreen';
 import EarningsScreen from '../screens/Farmer/EarningsScreen';
 import FarmerProfileScreen from '../screens/Farmer/FarmerProfileScreen';
+import FarmerReviewsScreen from '../screens/Farmer/FarmerReviewsScreen';
 
 // Consumer Screens
 import HomeScreen from '../screens/Consumer/HomeScreen';
@@ -89,13 +89,13 @@ const AppNavigator = () => {
             <Stack.Screen name="FarmerRegister" component={FarmerRegisterScreen} />
             <Stack.Screen name="ConsumerRegister" component={ConsumerRegisterScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
         ) : user.role === 'farmer' ? (
           <>
             <Stack.Screen name="FarmerMain" component={FarmerTabs} />
             <Stack.Screen name="FarmerProfile" component={FarmerProfileScreen} />
             <Stack.Screen name="AddListing" component={AddListingScreen} />
+            <Stack.Screen name="FarmerReviews" component={FarmerReviewsScreen} />
           </>
         ) : (
           <>

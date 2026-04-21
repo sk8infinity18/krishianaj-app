@@ -36,6 +36,13 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => { fetchListings(); }, [selectedCat]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchListings();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchListings();

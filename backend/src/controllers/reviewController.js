@@ -44,4 +44,9 @@ const getFarmerReviews = async (req, res) => {
   }
 };
 
-module.exports = { addReview, getFarmerReviews };
+const getMyFarmerReviews = async (req, res) => {
+  req.params.farmer_id = req.user.id;
+  return getFarmerReviews(req, res);
+};
+
+module.exports = { addReview, getFarmerReviews, getMyFarmerReviews };

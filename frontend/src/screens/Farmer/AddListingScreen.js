@@ -10,15 +10,19 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
+const CATEGORIES = ['Vegetables', 'Fruits', 'Grains', 'Pulses', 'Spices', 'Dairy', 'Oilseeds'];
+
 const AddListingScreen = ({ navigation }) => {
   const { showSuccess, showError, showWarning } = useSnackbar();
   const [form, setForm] = useState({
     crop_name: '',
+    category: 'Vegetables',
     quantity: '',
     price_per_unit: ''
   });
 
   const [images, setImages] = useState([]);
+  const [showCategories, setShowCategories] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
@@ -37,6 +41,10 @@ const AddListingScreen = ({ navigation }) => {
 
   // 📸 Camera
   const pickFromCamera = async () => {
+    if (Platform.OS === 'web') {
+      showWarning('Browser camera support may open a file picker. Use Expo Go on your phone for direct camera capture.');
+    }
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
@@ -86,7 +94,7 @@ const AddListingScreen = ({ navigation }) => {
   };
 
 const handleSubmit = async () => {
-  if (!form.crop_name || !form.quantity || !form.price_per_unit) {
+  if (!form.crop_name || !form.category || !form.quantity || !form.price_per_unit) {
     showWarning('Fill all required fields');
     return;
   }
@@ -96,11 +104,10 @@ const handleSubmit = async () => {
   try {
     const formData = new FormData();
 
-    // ✅ ADD missing fields
     formData.append("crop_name", form.crop_name);
-    formData.append("category", form.category || "Vegetables"); // 🔥 DEFAULT
+    formData.append("category", form.category);
     formData.append("quantity", form.quantity);
-    formData.append("unit", form.unit || "kg"); // 🔥 DEFAULT
+    formData.append("unit", form.unit || "kg");
     formData.append("price_per_unit", form.price_per_unit);
 
     images.forEach((img) => {
@@ -161,6 +168,29 @@ const handleSubmit = async () => {
           returnKeyType="next"
         />
 
+        <Text style={styles.label}>Category *</Text>
+        <TouchableOpacity style={styles.dropdown} onPress={() => setShowCategories(current => !current)}>
+          <Text style={styles.dropdownText}>{form.category}</Text>
+          <Text style={styles.dropdownArrow}>{showCategories ? '\u25B2' : '\u25BC'}</Text>
+        </TouchableOpacity>
+
+        {showCategories && (
+          <View style={styles.dropdownMenu}>
+            {CATEGORIES.map(category => (
+              <TouchableOpacity
+                key={category}
+                style={[styles.categoryOption, form.category === category && styles.categoryOptionActive]}
+                onPress={() => {
+                  set('category')(category);
+                  setShowCategories(false);
+                }}
+              >
+                <Text style={[styles.categoryOptionText, form.category === category && styles.categoryOptionTextActive]}>{category}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <Input
           label="Quantity *"
           value={form.quantity}
@@ -193,6 +223,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.md },
   title: { ...Typography.h3, marginBottom: 16 },
+  label: { ...Typography.label, color: Colors.textSecondary, marginBottom: Spacing.xs },
 
   buttonRow: {
     flexDirection: 'row',
@@ -205,6 +236,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Radius.md
   },
+
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    marginBottom: Spacing.md
+  },
+
+  dropdownText: { ...Typography.bodyLarge, color: Colors.textPrimary },
+  dropdownArrow: { ...Typography.bodySmall, color: Colors.textMuted },
+  dropdownMenu: {
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.md,
+    overflow: 'hidden'
+  },
+  categoryOption: { paddingHorizontal: Spacing.md, paddingVertical: 12 },
+  categoryOptionActive: { backgroundColor: Colors.surfaceWarm },
+  categoryOptionText: { ...Typography.bodyMedium, color: Colors.textSecondary },
+  categoryOptionTextActive: { color: Colors.primary, fontWeight: '700' },
 
   imageRow: {
     flexDirection: 'row',

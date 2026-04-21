@@ -55,7 +55,7 @@ const getListings = async (req, res) => {
     if (min_price) { conditions.push(`cl.price_per_unit >= $${idx++}`); params.push(parseFloat(min_price)); }
     if (max_price) { conditions.push(`cl.price_per_unit <= $${idx++}`); params.push(parseFloat(max_price)); }
     if (organic === 'true') { conditions.push(`cl.organic = TRUE`); }
-    if (search) { conditions.push(`(cl.crop_name ILIKE $${idx++} OR cl.description ILIKE $${idx++})`); params.push(`%${search}%`, `%${search}%`); idx++; }
+    if (search) { conditions.push(`(cl.crop_name ILIKE $${idx++} OR cl.description ILIKE $${idx++})`); params.push(`%${search}%`, `%${search}%`); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     params.push(parseInt(limit), parseInt(offset));
@@ -83,7 +83,7 @@ const getListing = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(
-      `SELECT cl.*, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name, f.farm_state, f.farm_district,
+      `SELECT cl.*, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name, f.farm_location, f.farm_state, f.farm_district,
               f.rating AS farmer_rating, f.total_reviews AS farmer_reviews, f.bio AS farmer_bio, f.profile_image AS farmer_image
        FROM crop_listings cl
        JOIN farmers f ON cl.farmer_id = f.id
@@ -121,18 +121,18 @@ const updateListing = async (req, res) => {
   try {
     const { id } = req.params;
     const farmer_id = req.user.id;
-    const { quantity, price_per_unit, is_available, description, available_until } = req.body;
+    const { quantity, price_per_unit, category, is_available, description, available_until } = req.body;
 
     const existing = await query(`SELECT * FROM crop_listings WHERE id = $1 AND farmer_id = $2`, [id, farmer_id]);
     if (!existing.rows[0]) return res.status(404).json({ success: false, message: 'Listing not found or unauthorized' });
 
     const result = await query(
       `UPDATE crop_listings SET quantity = COALESCE($1, quantity), price_per_unit = COALESCE($2, price_per_unit),
-        is_available = COALESCE($3, is_available), description = COALESCE($4, description),
-        available_until = COALESCE($5, available_until), updated_at = NOW()
-       WHERE id = $6 RETURNING *`,
+        category = COALESCE($3, category), is_available = COALESCE($4, is_available), description = COALESCE($5, description),
+        available_until = COALESCE($6, available_until), updated_at = NOW()
+       WHERE id = $7 RETURNING *`,
       [quantity ? parseFloat(quantity) : null, price_per_unit ? parseFloat(price_per_unit) : null,
-        is_available !== undefined ? is_available : null, description || null, available_until || null, id]
+        category || null, is_available !== undefined ? is_available : null, description || null, available_until || null, id]
     );
 
     res.json({ success: true, message: 'Listing updated', listing: result.rows[0] });

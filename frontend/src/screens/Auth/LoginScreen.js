@@ -22,9 +22,9 @@ const LoginScreen = ({ navigation }) => {
     try {
       let data;
       if (role === 'farmer') {
-        data = await api.farmerLogin({ first_name: form.identifier, password: form.password });
+        data = await api.farmerLogin({ farmer_id: form.identifier, password: form.password });
       } else {
-        data = await api.consumerLogin({ first_name: form.identifier, password: form.password });
+        data = await api.consumerLogin({ consumer_id: form.identifier, password: form.password });
       }
       await login(data.user, data.token);
       showSuccess('Signed in successfully');
@@ -58,19 +58,15 @@ const LoginScreen = ({ navigation }) => {
 
         <View style={styles.form}>
           <Input
-            label="First Name"
+            label={role === 'farmer' ? 'Farmer ID' : 'Consumer ID'}
             value={form.identifier}
             onChangeText={set('identifier')}
-            placeholder="Enter your first name"
+            placeholder={role === 'farmer' ? 'Enter your Farmer ID' : 'Enter your Consumer ID'}
             keyboardType="default"
             returnKeyType="next"
           />
           <Input label="Password" value={form.password} onChangeText={set('password')} placeholder="Enter password" secureTextEntry returnKeyType="done" onSubmitEditing={handleLogin} />
         </View>
-
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { role })} style={styles.forgot}>
-          <Text style={styles.forgotText}>Forgot password? Reset via OTP</Text>
-        </TouchableOpacity>
 
         <Button title="Sign In" onPress={handleLogin} loading={loading} style={styles.btn} />
 

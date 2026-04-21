@@ -10,12 +10,12 @@ import { Colors, Typography, Spacing } from '../../theme';
 const ConsumerRegisterScreen = ({ navigation }) => {
   const { login } = useAuth();
   const { showError, showWarning, showSuccess } = useSnackbar();
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone_number: '', email: '', password: '', confirm_password: '', delivery_city: '', delivery_state: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', consumer_id: '', password: '', confirm_password: '', delivery_city: '', delivery_state: '' });
   const [loading, setLoading] = useState(false);
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   const handleRegister = async () => {
-    if (!form.first_name || !form.last_name || !form.phone_number || !form.password)
+    if (!form.first_name || !form.last_name || !form.consumer_id || !form.password)
       return showWarning('Please fill all required fields');
     if (form.password !== form.confirm_password)
       return showWarning('Passwords do not match');
@@ -45,8 +45,7 @@ const ConsumerRegisterScreen = ({ navigation }) => {
           <Input label="First Name *" value={form.first_name} onChangeText={set('first_name')} placeholder="Priya" style={styles.half} />
           <Input label="Last Name *" value={form.last_name} onChangeText={set('last_name')} placeholder="Sharma" style={styles.half} />
         </View>
-        <Input label="Phone Number *" value={form.phone_number} onChangeText={set('phone_number')} placeholder="+91XXXXXXXXXX" keyboardType="phone-pad" />
-        <Input label="Email (optional)" value={form.email} onChangeText={set('email')} placeholder="priya@email.com" keyboardType="email-address" />
+        <Input label="Consumer ID *" value={form.consumer_id} onChangeText={set('consumer_id')} placeholder="e.g. CON-PRIYA-001" />
         <View style={styles.row}>
           <Input label="City" value={form.delivery_city} onChangeText={set('delivery_city')} placeholder="Mumbai" style={styles.half} />
           <Input label="State" value={form.delivery_state} onChangeText={set('delivery_state')} placeholder="Maharashtra" style={styles.half} />

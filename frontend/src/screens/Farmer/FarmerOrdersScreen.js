@@ -92,7 +92,7 @@ const FarmerOrdersScreen = ({ navigation }) => {
                 </View>
 
                 <Text style={styles.cropName}>{item.crop_name}</Text>
-                <Text style={styles.consumerName}>{'\u{1F464}'} {item.consumer_name} {'\u2022'} {'\u{1F4DE}'} {item.consumer_phone}</Text>
+                <Text style={styles.consumerName}>{'\u{1F464}'} {item.consumer_name}</Text>
                 <Text style={styles.orderDetail}>{item.quantity} {item.unit} @ {'\u20B9'}{item.price_per_unit}/{item.unit}</Text>
 
                 <View style={styles.amountRow}>

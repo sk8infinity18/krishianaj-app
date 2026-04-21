@@ -37,6 +37,11 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
   const images = listing.images?.length ? listing.images.map(resolveAssetUrl) : [];
   const total = (quantity * parseFloat(listing.price_per_unit)).toFixed(2);
+  const farmerLocation = listing.location
+    || [listing.district, listing.state].filter(Boolean).join(', ')
+    || listing.farm_location
+    || [listing.farm_district, listing.farm_state].filter(Boolean).join(', ')
+    || 'Location not available';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,7 +87,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
             <View style={{ flex: 1 }}>
               <Text style={styles.farmerName}>{listing.farmer_name}</Text>
               <Text style={styles.farmName}>{listing.farm_name}</Text>
-              <Text style={styles.farmLocation}>📍 {listing.district}, {listing.state}</Text>
+              <Text style={styles.farmLocation}>📍 {farmerLocation}</Text>
             </View>
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingText}>⭐ {parseFloat(listing.farmer_rating || 0).toFixed(1)}</Text>

@@ -69,6 +69,7 @@ const FarmerDashboardScreen = ({ navigation }) => {
             { label: 'My Listings', icon: '📋', screen: 'MyListings', color: Colors.info },
             { label: 'Orders', icon: '📦', screen: 'FarmerOrders', color: Colors.secondary },
             { label: 'Earnings', icon: '💹', screen: 'Earnings', color: Colors.success },
+            { label: 'Reviews', icon: '⭐', screen: 'FarmerReviews', color: Colors.warning },
           ].map(a => (
             <TouchableOpacity key={a.screen} style={[styles.actionCard, { borderColor: a.color }]} onPress={() => navigation.navigate(a.screen)}>
               <Text style={styles.actionIcon}>{a.icon}</Text>

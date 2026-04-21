@@ -11,7 +11,6 @@ const setupDatabase = async () => {
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
-        phone_number VARCHAR(15) UNIQUE NOT NULL,
         farmer_id VARCHAR(50) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         profile_image TEXT,
@@ -34,8 +33,7 @@ const setupDatabase = async () => {
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
-        phone_number VARCHAR(15) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE,
+        consumer_id VARCHAR(50) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         profile_image TEXT,
         delivery_address TEXT,
@@ -47,6 +45,14 @@ const setupDatabase = async () => {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
+
+    await client.query(`ALTER TABLE consumers ADD COLUMN IF NOT EXISTS consumer_id VARCHAR(50);`);
+    await client.query(`UPDATE consumers SET consumer_id = 'CON-' || SUBSTRING(id::TEXT, 1, 8) WHERE consumer_id IS NULL;`);
+    await client.query(`ALTER TABLE consumers ALTER COLUMN consumer_id SET NOT NULL;`);
+    await client.query(`ALTER TABLE consumers ADD CONSTRAINT consumers_consumer_id_key UNIQUE (consumer_id);`).catch(() => {});
+    await client.query(`ALTER TABLE farmers DROP COLUMN IF EXISTS phone_number CASCADE;`);
+    await client.query(`ALTER TABLE consumers DROP COLUMN IF EXISTS phone_number CASCADE;`);
+    await client.query(`ALTER TABLE consumers DROP COLUMN IF EXISTS email CASCADE;`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS crop_listings (
@@ -113,19 +119,7 @@ const setupDatabase = async () => {
       );
     `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS otps (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        phone_number VARCHAR(15) NOT NULL,
-        otp_code VARCHAR(6) NOT NULL,
-        purpose VARCHAR(20) NOT NULL DEFAULT 'password_reset',
-        user_type VARCHAR(20) NOT NULL,
-        attempts INTEGER DEFAULT 0,
-        expires_at TIMESTAMP NOT NULL,
-        is_used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+    await client.query(`DROP TABLE IF EXISTS otps CASCADE;`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS cart_items (
@@ -145,7 +139,6 @@ const setupDatabase = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_orders_consumer ON orders(consumer_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_orders_farmer ON orders(farmer_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_reviews_farmer ON reviews(farmer_id);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_otps_phone ON otps(phone_number, is_used);`);
 
     console.log('All tables created successfully!');
     console.log('KrishiAnaj database is ready!');

@@ -38,7 +38,6 @@ const ConsumerProfileScreen = ({ navigation }) => {
     api.getConsumerProfile().then((data) => {
       setProfile(data.profile);
       setForm({
-        email: data.profile.email || '',
         delivery_address: data.profile.delivery_address || '',
         delivery_city: data.profile.delivery_city || '',
         delivery_state: data.profile.delivery_state || '',
@@ -132,12 +131,11 @@ const ConsumerProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <Text style={styles.name}>{profile.first_name} {profile.last_name}</Text>
-          <Text style={styles.phone}>{profile.phone_number}</Text>
+          <Text style={styles.consumerId}>{profile.consumer_id}</Text>
         </View>
 
         {!editing ? (
           <>
-            <Input label="Email" value={form.email} editable={false} />
             <Input label="Address" value={form.delivery_address} editable={false} multiline numberOfLines={3} />
             <Input label="City" value={form.delivery_city} editable={false} />
             <Input label="State" value={form.delivery_state} editable={false} />
@@ -145,7 +143,6 @@ const ConsumerProfileScreen = ({ navigation }) => {
           </>
         ) : (
           <>
-            <Input label="Email" value={form.email} onChangeText={set('email')} keyboardType="email-address" returnKeyType="next" />
             <Input label="Address" value={form.delivery_address} onChangeText={set('delivery_address')} multiline numberOfLines={3} />
             <Input label="City" value={form.delivery_city} onChangeText={set('delivery_city')} returnKeyType="next" />
             <Input label="State" value={form.delivery_state} onChangeText={set('delivery_state')} returnKeyType="next" />
@@ -185,7 +182,7 @@ const styles = StyleSheet.create({
   },
   avatarInitial: { color: '#fff', fontSize: 30 },
   name: { fontSize: 18, marginTop: 10, color: Colors.textPrimary },
-  phone: { ...Typography.bodySmall, color: Colors.textSecondary, marginTop: 4 },
+  consumerId: { ...Typography.bodySmall, color: Colors.textSecondary, marginTop: 4 },
 });
 
 export default ConsumerProfileScreen;

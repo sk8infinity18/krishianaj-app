@@ -37,9 +37,6 @@ export const api = {
   consumerRegister: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/consumer/register`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
   farmerLogin: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/farmer/login`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
   consumerLogin: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/consumer/login`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
-  sendOTP: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/send-otp`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
-  resetPassword: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/reset-password`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
-
   // LISTINGS
   getListings: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -73,6 +70,7 @@ export const api = {
 
   // REVIEWS
   addReview: async (body) => handleResponse(await fetch(`${BASE_URL}/reviews`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
+  getMyFarmerReviews: async () => handleResponse(await fetch(`${BASE_URL}/reviews/farmer/me`, { headers: await getHeaders() })),
   getFarmerReviews: async (farmer_id) => handleResponse(await fetch(`${BASE_URL}/reviews/farmer/${farmer_id}`, { headers: await getHeaders() })),
 
   // PROFILE

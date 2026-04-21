@@ -55,7 +55,7 @@ const MyOrdersScreen = ({ navigation }) => {
                   <Text style={styles.amount}>₹{parseFloat(item.total_amount).toFixed(2)}</Text>
                 </View>
                 <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
-                {item.status === 'delivered' && (
+                {item.status === 'delivered' && !item.has_review && (
                   <TouchableOpacity style={styles.reviewBtn} onPress={() => navigation.navigate('AddReview', { order: item })}>
                     <Text style={styles.reviewBtnText}>⭐ Write a Review</Text>
                   </TouchableOpacity>

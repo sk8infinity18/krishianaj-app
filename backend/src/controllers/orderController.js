@@ -70,8 +70,10 @@ const getConsumerOrders = async (req, res) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await query(
-      `SELECT o.*, cl.crop_name, cl.images, cl.unit, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name
+      `SELECT o.*, cl.crop_name, cl.images, cl.unit, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name,
+              CASE WHEN r.id IS NULL THEN FALSE ELSE TRUE END AS has_review
        FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN farmers f ON o.farmer_id = f.id
+       LEFT JOIN reviews r ON r.order_id = o.id AND r.is_active = TRUE
        ${cond} ORDER BY o.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
 
     res.json({ success: true, orders: result.rows });
@@ -92,7 +94,7 @@ const getFarmerOrders = async (req, res) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await query(
-      `SELECT o.*, cl.crop_name, cl.images, c.first_name || ' ' || c.last_name AS consumer_name, c.phone_number AS consumer_phone
+      `SELECT o.*, cl.crop_name, cl.images, c.first_name || ' ' || c.last_name AS consumer_name
        FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN consumers c ON o.consumer_id = c.id
        ${cond} ORDER BY o.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
 
