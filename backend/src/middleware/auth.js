@@ -9,10 +9,10 @@ const authenticateFarmer = async (req, res, next) => {
     const decoded = verifyToken(token);
     if (decoded.role !== 'farmer') return res.status(403).json({ success: false, message: 'Farmer access only' });
 
-    const result = await query(`SELECT id, first_name, last_name, farmer_id, is_active FROM farmers WHERE id = $1`, [decoded.id]);
-    if (!result.rows[0] || !result.rows[0].is_active) return res.status(401).json({ success: false, message: 'Account not found or inactive' });
+    const result = await query(`SELECT farmer_id, first_name, last_name FROM farmers WHERE farmer_id = $1`, [decoded.id]);
+    if (!result.rows[0]) return res.status(401).json({ success: false, message: 'Account not found' });
 
-    req.user = { ...result.rows[0], role: 'farmer' };
+    req.user = { ...result.rows[0], id: result.rows[0].farmer_id, role: 'farmer' };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
@@ -27,10 +27,10 @@ const authenticateConsumer = async (req, res, next) => {
     const decoded = verifyToken(token);
     if (decoded.role !== 'consumer') return res.status(403).json({ success: false, message: 'Consumer access only' });
 
-    const result = await query(`SELECT id, first_name, last_name, consumer_id, is_active FROM consumers WHERE id = $1`, [decoded.id]);
-    if (!result.rows[0] || !result.rows[0].is_active) return res.status(401).json({ success: false, message: 'Account not found or inactive' });
+    const result = await query(`SELECT consumer_id, first_name, last_name FROM consumers WHERE consumer_id = $1`, [decoded.id]);
+    if (!result.rows[0]) return res.status(401).json({ success: false, message: 'Account not found' });
 
-    req.user = { ...result.rows[0], role: 'consumer' };
+    req.user = { ...result.rows[0], id: result.rows[0].consumer_id, role: 'consumer' };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });

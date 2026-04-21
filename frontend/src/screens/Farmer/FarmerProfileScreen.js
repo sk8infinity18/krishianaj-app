@@ -32,8 +32,7 @@ const FarmerProfileScreen = ({ navigation, route }) => {
         farm_name: d.profile.farm_name || '',
         farm_location: d.profile.farm_location || '',
         farm_state: d.profile.farm_state || '',
-        farm_district: d.profile.farm_district || '',
-        bio: d.profile.bio || ''
+        farm_district: d.profile.farm_district || ''
       });
     });
   }, []);
@@ -159,7 +158,6 @@ const FarmerProfileScreen = ({ navigation, route }) => {
             <Input label="Location" value={form.farm_location} onChangeText={set('farm_location')} />
             <Input label="State" value={form.farm_state} onChangeText={set('farm_state')} />
             <Input label="District" value={form.farm_district} onChangeText={set('farm_district')} />
-            <Input label="Bio" value={form.bio} onChangeText={set('bio')} />
 
             <Button title="Save Changes" onPress={handleSave} loading={loading} />
           </>

@@ -86,7 +86,7 @@ const FarmerDashboardScreen = ({ navigation }) => {
         {orders.length === 0 ? (
           <View style={styles.emptyBox}><Text style={styles.emptyText}>No orders yet. Add listings to start selling!</Text></View>
         ) : orders.slice(0, 4).map(o => (
-          <TouchableOpacity key={o.id} style={styles.orderCard} onPress={() => navigation.navigate('FarmerOrders')}>
+          <TouchableOpacity key={o.order_number} style={styles.orderCard} onPress={() => navigation.navigate('FarmerOrders')}>
             <View style={styles.orderRow}>
               <View>
                 <Text style={styles.orderCrop}>{o.crop_name}</Text>

@@ -37,6 +37,7 @@ export const api = {
   consumerRegister: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/consumer/register`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
   farmerLogin: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/farmer/login`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
   consumerLogin: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/consumer/login`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
+  forgotPassword: async (body) => handleResponse(await fetch(`${BASE_URL}/auth/forgot-password`, { method: 'POST', headers: await getHeaders(), body: JSON.stringify(body) })),
   // LISTINGS
   getListings: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -60,7 +61,7 @@ export const api = {
     return handleResponse(await fetch(`${BASE_URL}/orders/farmer${qs ? '?' + qs : ''}`, { headers: await getHeaders() }));
   },
   getFarmerEarnings: async () => handleResponse(await fetch(`${BASE_URL}/orders/farmer/earnings`, { headers: await getHeaders() })),
-  updateOrderStatus: async (id, status) => handleResponse(await fetch(`${BASE_URL}/orders/${id}/status`, { method: 'PUT', headers: await getHeaders(), body: JSON.stringify({ status }) })),
+  updateOrderStatus: async (orderNumber, status) => handleResponse(await fetch(`${BASE_URL}/orders/${orderNumber}/status`, { method: 'PUT', headers: await getHeaders(), body: JSON.stringify({ status }) })),
 
   // CART
   getCart: async () => handleResponse(await fetch(`${BASE_URL}/cart`, { headers: await getHeaders() })),

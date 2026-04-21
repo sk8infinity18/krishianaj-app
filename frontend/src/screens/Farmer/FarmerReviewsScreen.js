@@ -63,7 +63,6 @@ const FarmerReviewsScreen = ({ navigation }) => {
                 <Text style={styles.rating}>{'\u2B50'.repeat(item.rating)}</Text>
               </View>
               {item.review_text ? <Text style={styles.reviewText}>{item.review_text}</Text> : null}
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
             </View>
           )}
         />

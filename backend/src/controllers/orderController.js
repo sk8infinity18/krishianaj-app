@@ -14,6 +14,9 @@ const placeOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'listing_id, quantity, delivery_address required' });
     if (Number.isNaN(parsedQuantity) || parsedQuantity <= 0)
       return res.status(400).json({ success: false, message: 'Quantity must be greater than 0' });
+    const normalizedPaymentMethod = payment_method || 'pay_on_delivery';
+    if (!['pay_on_delivery', 'bank_transfer'].includes(normalizedPaymentMethod))
+      return res.status(400).json({ success: false, message: 'Invalid payment method' });
 
     await client.query('BEGIN');
     const rollbackAndRespond = async (statusCode, message) => {
@@ -22,7 +25,7 @@ const placeOrder = async (req, res) => {
     };
 
     const listingRes = await client.query(
-      `SELECT * FROM crop_listings WHERE id = $1 AND is_available = TRUE AND is_active = TRUE FOR UPDATE`, [listing_id]);
+      `SELECT * FROM crop_listings WHERE id = $1 AND is_available = TRUE FOR UPDATE`, [listing_id]);
     if (!listingRes.rows[0]) return rollbackAndRespond(404, 'Listing not found or unavailable');
 
     const listing = listingRes.rows[0];
@@ -40,13 +43,13 @@ const placeOrder = async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       [order_number, consumer_id, listing.farmer_id, listing_id, parsedQuantity, listing.unit,
         listing.price_per_unit, total_amount, delivery_address, delivery_city||null, delivery_state||null,
-        delivery_pincode||null, notes||null, payment_method||'cod']
+        delivery_pincode||null, notes||null, normalizedPaymentMethod]
     );
 
     // Update listing quantity
     const newQty = parseFloat(listing.quantity) - parsedQuantity;
     await client.query(
-      `UPDATE crop_listings SET quantity = $1, total_sold = total_sold + $2, is_available = $3, updated_at = NOW() WHERE id = $4`,
+      `UPDATE crop_listings SET quantity = $1, total_sold = total_sold + $2, is_available = $3 WHERE id = $4`,
       [newQty, parsedQuantity, newQty > 0, listing_id]
     );
 
@@ -72,9 +75,9 @@ const getConsumerOrders = async (req, res) => {
     const result = await query(
       `SELECT o.*, cl.crop_name, cl.images, cl.unit, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name,
               CASE WHEN r.id IS NULL THEN FALSE ELSE TRUE END AS has_review
-       FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN farmers f ON o.farmer_id = f.id
-       LEFT JOIN reviews r ON r.order_id = o.id AND r.is_active = TRUE
-       ${cond} ORDER BY o.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
+       FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN farmers f ON o.farmer_id = f.farmer_id
+       LEFT JOIN reviews r ON r.order_number = o.order_number
+       ${cond} ORDER BY o.order_number DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
 
     res.json({ success: true, orders: result.rows });
   } catch (err) {
@@ -95,8 +98,8 @@ const getFarmerOrders = async (req, res) => {
 
     const result = await query(
       `SELECT o.*, cl.crop_name, cl.images, c.first_name || ' ' || c.last_name AS consumer_name
-       FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN consumers c ON o.consumer_id = c.id
-       ${cond} ORDER BY o.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
+       FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id JOIN consumers c ON o.consumer_id = c.consumer_id
+       ${cond} ORDER BY o.order_number DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
 
     res.json({ success: true, orders: result.rows });
   } catch (err) {
@@ -108,13 +111,13 @@ const getFarmerOrders = async (req, res) => {
 // Update order status (farmer)
 const updateOrderStatus = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { order_number } = req.params;
     const { status } = req.body;
     const validStatuses = ['confirmed', 'processing', 'dispatched', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status))
       return res.status(400).json({ success: false, message: 'Invalid status' });
 
-    const existingOrder = await query(`SELECT id, status, total_amount FROM orders WHERE id = $1 AND farmer_id = $2`, [id, req.user.id]);
+    const existingOrder = await query(`SELECT order_number, status, total_amount FROM orders WHERE order_number = $1 AND farmer_id = $2`, [order_number, req.user.id]);
     if (!existingOrder.rows[0]) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const currentStatus = existingOrder.rows[0].status;
@@ -136,13 +139,13 @@ const updateOrderStatus = async (req, res) => {
     }
 
     const result = await query(
-      `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND farmer_id = $3 RETURNING *`,
-      [status, id, req.user.id]
+      `UPDATE orders SET status = $1 WHERE order_number = $2 AND farmer_id = $3 RETURNING *`,
+      [status, order_number, req.user.id]
     );
 
     // Update earnings on delivery
     if (status === 'delivered') {
-      await query(`UPDATE farmers SET total_earnings = total_earnings + $1 WHERE id = $2`, [result.rows[0].total_amount, req.user.id]);
+      await query(`UPDATE farmers SET total_earnings = total_earnings + $1 WHERE farmer_id = $2`, [result.rows[0].total_amount, req.user.id]);
     }
 
     res.json({ success: true, message: 'Order status updated', order: result.rows[0] });
@@ -157,11 +160,10 @@ const getFarmerEarnings = async (req, res) => {
   try {
     const farmer_id = req.user.id;
     const earnings = await query(
-      `SELECT total_earnings FROM farmers WHERE id = $1`, [farmer_id]);
+      `SELECT total_earnings FROM farmers WHERE farmer_id = $1`, [farmer_id]);
     const monthly = await query(
-      `SELECT TO_CHAR(created_at, 'YYYY-MM') AS month, SUM(total_amount) AS revenue, COUNT(*) AS orders
-       FROM orders WHERE farmer_id = $1 AND status = 'delivered'
-       GROUP BY month ORDER BY month DESC LIMIT 6`, [farmer_id]);
+      `SELECT 'All Time' AS month, SUM(total_amount) AS revenue, COUNT(*) AS orders
+       FROM orders WHERE farmer_id = $1 AND status = 'delivered'`, [farmer_id]);
     const topCrops = await query(
       `SELECT cl.crop_name, SUM(o.total_amount) AS revenue, SUM(o.quantity) AS qty_sold
        FROM orders o JOIN crop_listings cl ON o.listing_id = cl.id

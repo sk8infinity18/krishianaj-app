@@ -37,9 +37,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
   const images = listing.images?.length ? listing.images.map(resolveAssetUrl) : [];
   const total = (quantity * parseFloat(listing.price_per_unit)).toFixed(2);
-  const farmerLocation = listing.location
-    || [listing.district, listing.state].filter(Boolean).join(', ')
-    || listing.farm_location
+  const farmerLocation = listing.farm_location
     || [listing.farm_district, listing.farm_state].filter(Boolean).join(', ')
     || 'Location not available';
 
@@ -101,13 +99,6 @@ const ProductDetailScreen = ({ navigation, route }) => {
             <View style={styles.detailItem}><Text style={styles.detailLabel}>Quality</Text><Text style={styles.detailValue}>Grade {listing.quality_grade}</Text></View>
             <View style={styles.detailItem}><Text style={styles.detailLabel}>Type</Text><Text style={styles.detailValue}>{listing.organic ? 'Organic 🌿' : 'Conventional'}</Text></View>
           </View>
-
-          {listing.description && (
-            <View style={styles.descBox}>
-              <Text style={styles.descLabel}>Description</Text>
-              <Text style={styles.descText}>{listing.description}</Text>
-            </View>
-          )}
 
           {/* Reviews */}
           {reviews.length > 0 && (

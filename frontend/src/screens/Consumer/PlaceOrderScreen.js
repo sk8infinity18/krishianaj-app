@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -6,12 +6,11 @@ import { useCart } from '../../context/CartContext';
 import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const PAYMENT_METHODS = [
-  { id: 'cod', label: 'Cash on Delivery', icon: '💵' },
-  { id: 'upi', label: 'UPI', icon: '📱' },
-  { id: 'bank_transfer', label: 'Bank Transfer', icon: '🏦' },
+  { id: 'pay_on_delivery', label: 'Pay On Delivery', icon: '\u20B9' },
+  { id: 'bank_transfer', label: 'Bank Transfer', icon: '\u{1F3E6}' },
 ];
 
 const PlaceOrderScreen = ({ navigation }) => {
@@ -23,8 +22,20 @@ const PlaceOrderScreen = ({ navigation }) => {
   const [state, setState] = useState(user?.delivery_state || '');
   const [pincode, setPincode] = useState(user?.delivery_pincode || '');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [paymentMethod, setPaymentMethod] = useState('pay_on_delivery');
+  const [bankDetails, setBankDetails] = useState({ account_name: '', reference_number: '' });
+  const [bankDetailsNotified, setBankDetailsNotified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const setBank = (key) => (val) => setBankDetails(details => ({ ...details, [key]: val }));
+
+  useEffect(() => {
+    const hasDetails = bankDetails.account_name.trim() && bankDetails.reference_number.trim();
+    if (paymentMethod === 'bank_transfer' && hasDetails && !bankDetailsNotified) {
+      showSuccess('Bank transfer details entered');
+      setBankDetailsNotified(true);
+    }
+    if (!hasDetails && bankDetailsNotified) setBankDetailsNotified(false);
+  }, [bankDetails, bankDetailsNotified, paymentMethod, showSuccess]);
 
   const handlePlaceOrders = async () => {
     if (!address || !city) {
@@ -35,9 +46,12 @@ const PlaceOrderScreen = ({ navigation }) => {
       showWarning('Your cart is empty');
       return;
     }
+    if (paymentMethod === 'bank_transfer' && (!bankDetails.account_name.trim() || !bankDetails.reference_number.trim())) {
+      showWarning('Please enter bank transfer details');
+      return;
+    }
     setLoading(true);
     try {
-      // Place order for each cart item
       const promises = cartItems.map(item =>
         api.placeOrder({
           listing_id: item.listing_id,
@@ -61,7 +75,7 @@ const PlaceOrderScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>{'\u2190'}</Text></TouchableOpacity>
         <Text style={styles.headerTitle}>Place Order</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -81,24 +95,33 @@ const PlaceOrderScreen = ({ navigation }) => {
             <TouchableOpacity key={pm.id} style={[styles.paymentCard, paymentMethod === pm.id && styles.paymentCardActive]} onPress={() => setPaymentMethod(pm.id)}>
               <Text style={styles.paymentIcon}>{pm.icon}</Text>
               <Text style={[styles.paymentLabel, paymentMethod === pm.id && styles.paymentLabelActive]}>{pm.label}</Text>
-              {paymentMethod === pm.id && <Text style={styles.checkmark}>✓</Text>}
+              {paymentMethod === pm.id && <Text style={styles.checkmark}>{'\u2713'}</Text>}
             </TouchableOpacity>
           ))}
         </View>
 
+        {paymentMethod === 'bank_transfer' && (
+          <View style={styles.bankBox}>
+            <Text style={styles.bankInfo}>Demo Bank: KrishiAnaj Farmers Account</Text>
+            <Text style={styles.bankInfo}>Account No: 0000000000 | IFSC: KRSH0001234</Text>
+            <Input label="Account Holder Name *" value={bankDetails.account_name} onChangeText={setBank('account_name')} placeholder="Name used for transfer" />
+            <Input label="Transaction Reference *" value={bankDetails.reference_number} onChangeText={setBank('reference_number')} placeholder="Dummy reference number" returnKeyType="done" />
+          </View>
+        )}
+
         <Text style={styles.sectionTitle}>Order Summary</Text>
         {cartItems.map(item => (
-          <View key={item.id} style={styles.summaryRow}>
-            <Text style={styles.summaryItem}>{item.crop_name} × {item.quantity} {item.unit}</Text>
-            <Text style={styles.summaryPrice}>₹{(item.quantity * item.price_per_unit).toFixed(2)}</Text>
+          <View key={item.listing_id} style={styles.summaryRow}>
+            <Text style={styles.summaryItem}>{item.crop_name} {'\u00D7'} {item.quantity} {item.unit}</Text>
+            <Text style={styles.summaryPrice}>{'\u20B9'}{Number(item.quantity * item.price_per_unit).toFixed(2)}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>₹{parseFloat(cartTotal).toFixed(2)}</Text>
+          <Text style={styles.totalValue}>{'\u20B9'}{parseFloat(cartTotal).toFixed(2)}</Text>
         </View>
 
-        <Button title={`Confirm Order — ₹${parseFloat(cartTotal).toFixed(2)}`} onPress={handlePlaceOrders} loading={loading} variant="accent" style={styles.orderBtn} />
+        <Button title={`Confirm Order - \u20B9${parseFloat(cartTotal).toFixed(2)}`} onPress={handlePlaceOrders} loading={loading} variant="accent" style={styles.orderBtn} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -120,6 +143,8 @@ const styles = StyleSheet.create({
   paymentLabel: { ...Typography.h4, color: Colors.textSecondary, flex: 1 },
   paymentLabelActive: { color: Colors.primary },
   checkmark: { color: Colors.primary, fontWeight: '700', fontSize: 18 },
+  bankBox: { marginBottom: Spacing.lg },
+  bankInfo: { ...Typography.bodySmall, color: Colors.textMuted, marginBottom: Spacing.xs },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   summaryItem: { ...Typography.bodyMedium, color: Colors.textSecondary },
   summaryPrice: { ...Typography.bodyMedium, color: Colors.textPrimary, fontWeight: '600' },

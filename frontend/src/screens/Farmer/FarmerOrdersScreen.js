@@ -39,8 +39,8 @@ const FarmerOrdersScreen = ({ navigation }) => {
     if (!confirmed) return;
 
     try {
-      const data = await api.updateOrderStatus(order.id, next);
-      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, ...data.order } : item));
+      const data = await api.updateOrderStatus(order.order_number, next);
+      setOrders((current) => current.map((item) => item.order_number === order.order_number ? { ...item, ...data.order } : item));
       showSuccess(`Order marked as ${next}`);
       fetchOrders();
     } catch (err) {
@@ -77,14 +77,14 @@ const FarmerOrdersScreen = ({ navigation }) => {
         ) : (
           <FlatList
             data={orders}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.order_number}
             contentContainerStyle={{ padding: Spacing.md }}
             renderItem={({ item }) => (
               <View style={styles.orderCard}>
                 <View style={styles.orderTop}>
                   <View>
                     <Text style={styles.orderNum}>#{item.order_number}</Text>
-                    <Text style={styles.orderDate}>{new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text>
+                    <Text style={styles.orderDate}>{item.quantity} {item.unit}</Text>
                   </View>
                   <View style={[styles.statusPill, { backgroundColor: STATUS_COLORS[item.status] }]}>
                     <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>

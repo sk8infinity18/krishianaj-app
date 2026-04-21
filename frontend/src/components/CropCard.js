@@ -36,9 +36,9 @@ const CropCard = ({ listing, onPress, compact = false }) => {
             <Text style={styles.price}>₹{listing.price_per_unit}/{listing.unit}</Text>
             {!compact && <Text style={styles.qty}>{listing.quantity} {listing.unit} avail.</Text>}
           </View>
-          {!compact && listing.state && (
+          {!compact && (listing.farm_district || listing.farm_state) && (
             <View style={styles.locationChip}>
-              <Text style={styles.locationText}>📍 {listing.district || listing.state}</Text>
+              <Text style={styles.locationText}>📍 {listing.farm_district || listing.farm_state}</Text>
             </View>
           )}
         </View>

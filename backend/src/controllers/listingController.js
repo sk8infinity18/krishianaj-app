@@ -5,8 +5,8 @@ const { uploadToCloudinary } = require('../utils/cloudinary');
 const createListing = async (req, res) => {
   try {
     const farmer_id = req.user.id;
-    const { crop_name, category, description, quantity, unit, price_per_unit, min_order_quantity,
-      harvest_date, available_until, quality_grade, organic, location, state, district, pincode } = req.body;
+    const { crop_name, category, quantity, unit, price_per_unit, min_order_quantity,
+      harvest_date, available_until, quality_grade, organic } = req.body;
 
     if (!crop_name || !category || !quantity || !unit || !price_per_unit)
       return res.status(400).json({ success: false, message: 'Required fields missing' });
@@ -20,13 +20,12 @@ const createListing = async (req, res) => {
     }
 
     const result = await query(
-      `INSERT INTO crop_listings (farmer_id, crop_name, category, description, quantity, unit, price_per_unit,
-        min_order_quantity, harvest_date, available_until, quality_grade, organic, images, location, state, district, pincode)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
-      [farmer_id, crop_name, category, description || null, parseFloat(quantity), unit, parseFloat(price_per_unit),
+      `INSERT INTO crop_listings (farmer_id, crop_name, category, quantity, unit, price_per_unit,
+        min_order_quantity, harvest_date, available_until, quality_grade, organic, images)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [farmer_id, crop_name, category, parseFloat(quantity), unit, parseFloat(price_per_unit),
         parseFloat(min_order_quantity) || 1, harvest_date || null, available_until || null,
-        quality_grade || 'A', organic === 'true' || organic === true, images,
-        location || null, state || null, district || null, pincode || null]
+        quality_grade || 'A', organic === 'true' || organic === true, images]
     );
 
     res.status(201).json({ success: true, message: 'Crop listed successfully', listing: result.rows[0] });
@@ -43,30 +42,28 @@ const createListing = async (req, res) => {
 // Get all listings (consumer browse)
 const getListings = async (req, res) => {
   try {
-    const { category, state, district, min_price, max_price, organic, search, page = 1, limit = 20 } = req.query;
+    const { category, min_price, max_price, organic, search, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
-    let conditions = [`cl.is_available = TRUE`, `cl.is_active = TRUE`];
+    let conditions = [`cl.is_available = TRUE`];
     let params = [];
     let idx = 1;
 
     if (category) { conditions.push(`cl.category ILIKE $${idx++}`); params.push(`%${category}%`); }
-    if (state) { conditions.push(`cl.state ILIKE $${idx++}`); params.push(`%${state}%`); }
-    if (district) { conditions.push(`cl.district ILIKE $${idx++}`); params.push(`%${district}%`); }
     if (min_price) { conditions.push(`cl.price_per_unit >= $${idx++}`); params.push(parseFloat(min_price)); }
     if (max_price) { conditions.push(`cl.price_per_unit <= $${idx++}`); params.push(parseFloat(max_price)); }
     if (organic === 'true') { conditions.push(`cl.organic = TRUE`); }
-    if (search) { conditions.push(`(cl.crop_name ILIKE $${idx++} OR cl.description ILIKE $${idx++})`); params.push(`%${search}%`, `%${search}%`); }
+    if (search) { conditions.push(`cl.crop_name ILIKE $${idx++}`); params.push(`%${search}%`); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     params.push(parseInt(limit), parseInt(offset));
 
     const countResult = await query(`SELECT COUNT(*) FROM crop_listings cl ${where}`, params.slice(0, -2));
     const listingsResult = await query(
-      `SELECT cl.*, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name, f.rating AS farmer_rating, f.farm_state
+      `SELECT cl.*, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name, f.rating AS farmer_rating, f.farm_state, f.farm_district
        FROM crop_listings cl
-       JOIN farmers f ON cl.farmer_id = f.id
+       JOIN farmers f ON cl.farmer_id = f.farmer_id
        ${where}
-       ORDER BY cl.created_at DESC
+       ORDER BY cl.crop_name ASC
        LIMIT $${idx} OFFSET $${idx + 1}`,
       params
     );
@@ -84,17 +81,17 @@ const getListing = async (req, res) => {
     const { id } = req.params;
     const result = await query(
       `SELECT cl.*, f.first_name || ' ' || f.last_name AS farmer_name, f.farm_name, f.farm_location, f.farm_state, f.farm_district,
-              f.rating AS farmer_rating, f.total_reviews AS farmer_reviews, f.bio AS farmer_bio, f.profile_image AS farmer_image
+              f.rating AS farmer_rating, f.total_reviews AS farmer_reviews, f.profile_image AS farmer_image
        FROM crop_listings cl
-       JOIN farmers f ON cl.farmer_id = f.id
-       WHERE cl.id = $1 AND cl.is_active = TRUE`, [id]
+       JOIN farmers f ON cl.farmer_id = f.farmer_id
+       WHERE cl.id = $1`, [id]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, message: 'Listing not found' });
 
     const reviews = await query(
       `SELECT r.*, c.first_name || ' ' || c.last_name AS consumer_name FROM reviews r
-       JOIN consumers c ON r.consumer_id = c.id
-       WHERE r.listing_id = $1 AND r.is_active = TRUE ORDER BY r.created_at DESC LIMIT 5`, [id]
+       JOIN consumers c ON r.consumer_id = c.consumer_id
+       WHERE r.listing_id = $1 LIMIT 5`, [id]
     );
 
     res.json({ success: true, listing: result.rows[0], reviews: reviews.rows });
@@ -108,7 +105,7 @@ const getListing = async (req, res) => {
 const getFarmerListings = async (req, res) => {
   try {
     const farmer_id = req.user.id;
-    const result = await query(`SELECT * FROM crop_listings WHERE farmer_id = $1 AND is_active = TRUE ORDER BY created_at DESC`, [farmer_id]);
+    const result = await query(`SELECT * FROM crop_listings WHERE farmer_id = $1 ORDER BY crop_name ASC`, [farmer_id]);
     res.json({ success: true, listings: result.rows });
   } catch (err) {
     console.error('getFarmerListings error:', err);
@@ -121,18 +118,17 @@ const updateListing = async (req, res) => {
   try {
     const { id } = req.params;
     const farmer_id = req.user.id;
-    const { quantity, price_per_unit, category, is_available, description, available_until } = req.body;
+    const { quantity, price_per_unit, category, is_available, available_until } = req.body;
 
     const existing = await query(`SELECT * FROM crop_listings WHERE id = $1 AND farmer_id = $2`, [id, farmer_id]);
     if (!existing.rows[0]) return res.status(404).json({ success: false, message: 'Listing not found or unauthorized' });
 
     const result = await query(
       `UPDATE crop_listings SET quantity = COALESCE($1, quantity), price_per_unit = COALESCE($2, price_per_unit),
-        category = COALESCE($3, category), is_available = COALESCE($4, is_available), description = COALESCE($5, description),
-        available_until = COALESCE($6, available_until), updated_at = NOW()
-       WHERE id = $7 RETURNING *`,
+        category = COALESCE($3, category), is_available = COALESCE($4, is_available), available_until = COALESCE($5, available_until)
+       WHERE id = $6 RETURNING *`,
       [quantity ? parseFloat(quantity) : null, price_per_unit ? parseFloat(price_per_unit) : null,
-        category || null, is_available !== undefined ? is_available : null, description || null, available_until || null, id]
+        category || null, is_available !== undefined ? is_available : null, available_until || null, id]
     );
 
     res.json({ success: true, message: 'Listing updated', listing: result.rows[0] });
@@ -146,9 +142,13 @@ const updateListing = async (req, res) => {
 const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
-    await query(`UPDATE crop_listings SET is_active = FALSE WHERE id = $1 AND farmer_id = $2`, [id, req.user.id]);
+    const result = await query(`DELETE FROM crop_listings WHERE id = $1 AND farmer_id = $2`, [id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ success: false, message: 'Listing not found or unauthorized' });
     res.json({ success: true, message: 'Listing deleted' });
   } catch (err) {
+    if (err.code === '23503') {
+      return res.status(400).json({ success: false, message: 'Listing has orders and cannot be deleted. Turn it off instead.' });
+    }
     res.status(500).json({ success: false, message: 'Failed to delete listing' });
   }
 };
@@ -156,7 +156,7 @@ const deleteListing = async (req, res) => {
 // Get categories
 const getCategories = async (req, res) => {
   try {
-    const result = await query(`SELECT DISTINCT category, COUNT(*) as count FROM crop_listings WHERE is_available = TRUE AND is_active = TRUE GROUP BY category ORDER BY count DESC`);
+    const result = await query(`SELECT DISTINCT category, COUNT(*) as count FROM crop_listings WHERE is_available = TRUE GROUP BY category ORDER BY count DESC`);
     res.json({ success: true, categories: result.rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch categories' });

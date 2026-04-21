@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { useCart } from '../../context/CartContext';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { resolveAssetUrl } from '../../services/api';
+import { confirmAction } from '../../utils/confirmAction';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
@@ -12,22 +13,16 @@ const CartScreen = ({ navigation }) => {
 
   useEffect(() => { fetchCart(); }, []);
 
-  const handleRemove = (id, name) => {
-    Alert.alert('Remove Item', `Remove ${name} from cart?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await removeItem(id);
-            showSuccess('Removed from cart');
-          } catch (err) {
-            showError(err.message);
-          }
-        }
-      }
-    ]);
+  const handleRemove = async (id, name) => {
+    const confirmed = await confirmAction('Remove Item', `Remove ${name} from cart?`);
+    if (!confirmed) return;
+
+    try {
+      await removeItem(id);
+      showSuccess('Removed from cart');
+    } catch (err) {
+      showError(err.message);
+    }
   };
 
   if (cartItems.length === 0) return (
@@ -48,7 +43,7 @@ const CartScreen = ({ navigation }) => {
       </View>
       <FlatList
         data={cartItems}
-        keyExtractor={i => i.id}
+        keyExtractor={i => i.listing_id}
         contentContainerStyle={{ padding: Spacing.md }}
         renderItem={({ item }) => (
           <View style={styles.cartItem}>
@@ -59,7 +54,7 @@ const CartScreen = ({ navigation }) => {
               <Text style={styles.itemQty}>{item.quantity} {item.unit} × ₹{item.price_per_unit}</Text>
               <Text style={styles.itemTotal}>₹{(item.quantity * item.price_per_unit).toFixed(2)}</Text>
             </View>
-            <TouchableOpacity onPress={() => handleRemove(item.id, item.crop_name)} style={styles.removeBtn}>
+            <TouchableOpacity onPress={() => handleRemove(item.listing_id, item.crop_name)} style={styles.removeBtn}>
               <Text style={styles.removeIcon}>🗑</Text>
             </TouchableOpacity>
           </View>

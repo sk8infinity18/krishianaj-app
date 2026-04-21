@@ -39,7 +39,7 @@ const MyOrdersScreen = ({ navigation }) => {
         orders.length === 0 ? (
           <View style={styles.empty}><Text style={styles.emptyEmoji}>📦</Text><Text style={styles.emptyText}>No orders yet</Text></View>
         ) : (
-          <FlatList data={orders} keyExtractor={i => i.id} contentContainerStyle={{ padding: Spacing.md }}
+          <FlatList data={orders} keyExtractor={i => i.order_number} contentContainerStyle={{ padding: Spacing.md }}
             renderItem={({ item }) => (
               <View style={styles.orderCard}>
                 <View style={styles.orderHeader}>
@@ -54,7 +54,6 @@ const MyOrdersScreen = ({ navigation }) => {
                   <Text style={styles.qty}>{item.quantity} {item.unit}</Text>
                   <Text style={styles.amount}>₹{parseFloat(item.total_amount).toFixed(2)}</Text>
                 </View>
-                <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
                 {item.status === 'delivered' && !item.has_review && (
                   <TouchableOpacity style={styles.reviewBtn} onPress={() => navigation.navigate('AddReview', { order: item })}>
                     <Text style={styles.reviewBtnText}>⭐ Write a Review</Text>

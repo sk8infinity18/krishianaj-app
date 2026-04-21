@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, Image, Switch } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, Image, Switch } from 'react-native';
 import { api, resolveAssetUrl } from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { confirmAction } from '../../utils/confirmAction';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
@@ -28,23 +29,17 @@ const MyListingsScreen = ({ navigation }) => {
     } catch (err) { showError(err.message); }
   };
 
-  const handleDelete = (id, name) => {
-    Alert.alert('Delete Listing', `Delete "${name}"? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.deleteListing(id);
-            showSuccess('Listing deleted successfully');
-            fetchListings();
-          } catch (err) {
-            showError(err.message);
-          }
-        }
-      }
-    ]);
+  const handleDelete = async (id, name) => {
+    const confirmed = await confirmAction('Delete Listing', `Delete "${name}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await api.deleteListing(id);
+      setListings(prev => prev.filter(l => l.id !== id));
+      showSuccess('Listing deleted successfully');
+    } catch (err) {
+      showError(err.message);
+    }
   };
 
   return (
@@ -82,7 +77,6 @@ const MyListingsScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.statsRow}>
                   <Text style={styles.stat}>Sold: {item.total_sold} {item.unit}</Text>
-                  <Text style={styles.stat}>Listed: {new Date(item.created_at).toLocaleDateString('en-IN')}</Text>
                   {item.organic && <View style={styles.organicBadge}><Text style={styles.organicText}>Organic</Text></View>}
                 </View>
               </View>

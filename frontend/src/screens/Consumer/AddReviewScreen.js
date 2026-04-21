@@ -17,7 +17,7 @@ const AddReviewScreen = ({ navigation, route }) => {
     if (rating === 0) return showWarning('Please select a star rating');
     setLoading(true);
     try {
-      await api.addReview({ order_id: order.id, rating, review_text: reviewText });
+      await api.addReview({ order_number: order.order_number, rating, review_text: reviewText });
       showSuccess('Review submitted successfully');
       navigation.goBack();
     } catch (err) { showError(err.message); }

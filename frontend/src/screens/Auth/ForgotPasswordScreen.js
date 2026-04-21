@@ -1,36 +1,33 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 
-const LoginScreen = ({ navigation }) => {
-  const { login } = useAuth();
+const ForgotPasswordScreen = ({ navigation }) => {
   const { showError, showWarning, showSuccess } = useSnackbar();
-  const [role, setRole] = useState('farmer'); // 'farmer' | 'consumer'
-  const [form, setForm] = useState({ identifier: '', password: '' });
+  const [role, setRole] = useState('farmer');
+  const [form, setForm] = useState({ identifier: '', password: '', confirm_password: '' });
   const [loading, setLoading] = useState(false);
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
-  const handleLogin = async () => {
-    if (!form.identifier || !form.password)
-      return showWarning('Please enter your credentials');
+  const handleReset = async () => {
+    if (!form.identifier || !form.password) return showWarning('Please enter your account ID and new password');
+    if (form.password !== form.confirm_password) return showWarning('Passwords do not match');
+    if (form.password.length < 6) return showWarning('Password must be at least 6 characters');
+
     setLoading(true);
     try {
-      let data;
-      if (role === 'farmer') {
-        data = await api.farmerLogin({ farmer_id: form.identifier, password: form.password });
-      } else {
-        data = await api.consumerLogin({ consumer_id: form.identifier, password: form.password });
-      }
-      await login(data.user, data.token);
-      showSuccess('Signed in successfully');
+      await api.forgotPassword({ role, identifier: form.identifier, new_password: form.password });
+      showSuccess('Password updated successfully');
+      navigation.navigate('Login');
     } catch (err) {
       showError(err.message);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,11 +39,10 @@ const LoginScreen = ({ navigation }) => {
 
         <View style={styles.header}>
           <Text style={styles.logo}>{'\u{1F33E}'}</Text>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to KrishiAnaj</Text>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Use your Farmer ID or Consumer ID</Text>
         </View>
 
-        {/* Role Tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, role === 'farmer' && styles.activeTab]} onPress={() => setRole('farmer')}>
             <Text style={[styles.tabText, role === 'farmer' && styles.activeTabText]}>{'\u{1F9D1}\u200D\u{1F33E}'} Farmer</Text>
@@ -57,29 +53,12 @@ const LoginScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.form}>
-          <Input
-            label={role === 'farmer' ? 'Farmer ID' : 'Consumer ID'}
-            value={form.identifier}
-            onChangeText={set('identifier')}
-            placeholder={role === 'farmer' ? 'Enter your Farmer ID' : 'Enter your Consumer ID'}
-            keyboardType="default"
-            returnKeyType="next"
-          />
-          <Input label="Password" value={form.password} onChangeText={set('password')} placeholder="Enter password" secureTextEntry returnKeyType="done" onSubmitEditing={handleLogin} />
+          <Input label={role === 'farmer' ? 'Farmer ID' : 'Consumer ID'} value={form.identifier} onChangeText={set('identifier')} placeholder={role === 'farmer' ? 'Enter your Farmer ID' : 'Enter your Consumer ID'} returnKeyType="next" />
+          <Input label="New Password" value={form.password} onChangeText={set('password')} placeholder="Min 6 characters" secureTextEntry returnKeyType="next" />
+          <Input label="Confirm New Password" value={form.confirm_password} onChangeText={set('confirm_password')} placeholder="Re-enter password" secureTextEntry returnKeyType="done" onSubmitEditing={handleReset} />
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgot}>
-          <Text style={styles.forgotText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <Button title="Sign In" onPress={handleLogin} loading={loading} style={styles.btn} />
-
-        <View style={styles.registerRow}>
-          <Text style={styles.registerText}>New here? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate(role === 'farmer' ? 'FarmerRegister' : 'ConsumerRegister')}>
-            <Text style={styles.registerLink}>Create Account</Text>
-          </TouchableOpacity>
-        </View>
+        <Button title="Update Password" onPress={handleReset} loading={loading} style={styles.btn} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -93,19 +72,14 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: Spacing.xl },
   logo: { fontSize: 52, marginBottom: 8 },
   title: { ...Typography.displaySmall, color: Colors.textPrimary },
-  subtitle: { ...Typography.bodyMedium, color: Colors.textSecondary, marginTop: 4 },
+  subtitle: { ...Typography.bodyMedium, color: Colors.textSecondary, marginTop: 4, textAlign: 'center' },
   tabs: { flexDirection: 'row', backgroundColor: Colors.borderLight, borderRadius: Radius.lg, padding: 4, marginBottom: Spacing.xl },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: Radius.md },
   activeTab: { backgroundColor: Colors.primary, ...Shadow.sm },
   tabText: { ...Typography.h4, color: Colors.textSecondary },
   activeTabText: { color: '#fff' },
   form: { marginBottom: Spacing.sm },
-  forgot: { alignItems: 'flex-end', marginBottom: Spacing.xl },
-  forgotText: { ...Typography.bodySmall, color: Colors.primary, fontWeight: '600' },
-  btn: { marginBottom: Spacing.lg },
-  registerRow: { flexDirection: 'row', justifyContent: 'center' },
-  registerText: { ...Typography.bodyMedium, color: Colors.textSecondary },
-  registerLink: { ...Typography.bodyMedium, color: Colors.primary, fontWeight: '700' },
+  btn: { marginTop: Spacing.md },
 });
 
-export default LoginScreen;
+export default ForgotPasswordScreen;
